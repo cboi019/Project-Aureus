@@ -20,17 +20,24 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 .then(() => console.log('>>> 🚀 SYSTEM ONLINE'))
 .catch(err => console.error('❌ DATABASE ERROR:', err.message));
 
+// --- 📧 MAIL ENGINE (CLOUD-OPTIMIZED) ---
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
   host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // Use SSL
+  port: 587,
+  secure: false, // Must be false for Port 587
   auth: { 
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS 
   },
-  debug: true, // This will show us the exact SMTP conversation
-  logger: true  // This prints the error to your terminal/Render logs
+  tls: {
+    // This prevents the connection from hanging if the certificate 
+    // handshake is slightly delayed by Render's proxy
+    rejectUnauthorized: false,
+    minVersion: "TLSv1.2"
+  },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 10000
 });
 
 // --- 🏗️ SCHEMAS ---
