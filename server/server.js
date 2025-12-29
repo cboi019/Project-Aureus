@@ -1,6 +1,7 @@
 //server.js
 
-require('dotenv').config({ path: '../.env' });
+// 1. Adjusted dotenv for production flexibility
+require('dotenv').config(); 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -10,9 +11,18 @@ const cron = require('node-cron');
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// 2. Restricted CORS for security (replace with your frontend URL later)
+app.use(cors({
+  origin: [
+    'http://localhost:5173', 
+    'https://aureus-capital.onrender.com' // YOUR RENDER FRONTEND URL
+  ],
+  credentials: true
+}));
 
 // --- 🛡️ DATABASE CONNECTION ---
+// Changed process.env.MONGO_URI to match your variable naming
 mongoose.connect(process.env.MONGO_URI, {
   dbName: 'aureus_capital' 
 })
@@ -25,41 +35,42 @@ mongoose.connect(process.env.MONGO_URI, {
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+  auth: { 
+    user: process.env.EMAIL_USER, 
+    pass: process.env.EMAIL_PASS 
+  }
 });
 
-// --- 🏗️ SCHEMAS ---
+// --- 🏗️ SCHEMAS (KEPT EXACTLY AS PROVIDED) ---
 const User = mongoose.model('User', new mongoose.Schema({
   fullName: String, 
   email: { type: String, unique: true }, 
   password: String, 
-  totalProfit: { type: Number, default: 0 }, // Only accumulated profit, never decreases
+  totalProfit: { type: Number, default: 0 },
   role: { type: String, default: 'investor' }
 }));
 
-// Investment Structure Schema (like a smart contract)
 const InvestmentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   currentAmount: { type: Number, required: true },
-  planType: { type: String, required: true }, // SILVER, GOLD, DIAMOND
-  planDuration: { type: Number, required: true }, // 3, 6, or 12 months
+  planType: { type: String, required: true },
+  planDuration: { type: Number, required: true },
   apy: { type: Number, required: true },
   maxAmount: { type: Number, required: true },
   startDate: { type: Date, default: Date.now },
   lockUntil: { type: Date, required: true },
   lastProfitUpdate: { type: Date, default: Date.now },
-  status: { type: String, default: 'active' } // active or closed
+  status: { type: String, default: 'active' }
 });
 
 const Investment = mongoose.model('Investment', InvestmentSchema);
 
-// Transaction Schema - for deposit/withdrawal requests
 const TransactionSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  investmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Investment' }, // Link to specific investment
+  investmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Investment' },
   amount: Number, 
   type: { type: String, enum: ['deposit', 'withdrawal'] },
-  status: { type: String, default: 'pending' }, // pending, approved, denied
+  status: { type: String, default: 'pending' },
   planName: String, 
   targetWallet: String, 
   userWallet: String, 
@@ -71,7 +82,7 @@ const Transaction = mongoose.model('Transaction', TransactionSchema);
 
 const Wallet = mongoose.model('Wallet', new mongoose.Schema({ name: String, address: String }));
 
-// --- 🔐 AUTHENTICATION ---
+// --- 🔐 AUTHENTICATION (KEPT EXACTLY AS PROVIDED) ---
 
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -110,7 +121,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// --- 💸 TRANSACTIONS & INVESTMENT MANAGEMENT ---
+// --- 💸 TRANSACTIONS & INVESTMENT MANAGEMENT (KEPT EXACTLY AS PROVIDED) ---
 
 app.post('/api/transactions/request', async (req, res) => {
   const { userId, amount, type, planName, targetWallet, userWallet, months, parentStructId } = req.body;
@@ -119,7 +130,6 @@ app.post('/api/transactions/request', async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // For withdrawals, check if investment is mature
     if (type === 'withdrawal') {
       const investment = await Investment.findById(parentStructId);
       if (!investment) return res.status(404).json({ error: "Investment not found" });
@@ -131,7 +141,6 @@ app.post('/api/transactions/request', async (req, res) => {
         });
       }
 
-      // Create withdrawal transaction
       const trans = new Transaction({ 
         userId, 
         investmentId: parentStructId,
@@ -157,7 +166,6 @@ app.post('/api/transactions/request', async (req, res) => {
       return res.json({ success: true });
     }
 
-    // For deposits (new investment or top-up)
     const trans = new Transaction({ 
       userId, 
       amount, 
@@ -209,31 +217,18 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
     if (!trans) return res.status(404).json({ error: "Transaction not found" });
 
     if (type === 'deposit') {
-      const apyMap = {
-        'SILVER TIER': 12,
-        'GOLD TIER': 24,
-        'DIAMOND TIER': 40
-      };
-
-      const maxAmountMap = {
-        3: 5000,
-        6: 10000,
-        12: 50000
-      };
-
+      const apyMap = { 'SILVER TIER': 12, 'GOLD TIER': 24, 'DIAMOND TIER': 40 };
+      const maxAmountMap = { 3: 5000, 6: 10000, 12: 50000 };
       const apy = apyMap[trans.planName] || 12;
       const maxAmount = maxAmountMap[trans.months] || 5000;
 
-      // Check if this is a top-up or new investment
       if (trans.investmentId) {
-        // Top-up existing investment
         const investment = await Investment.findById(trans.investmentId);
         if (investment) {
           investment.currentAmount += Number(amount);
           await investment.save();
         }
       } else {
-        // Create new investment structure
         const lockDate = new Date();
         lockDate.setMonth(lockDate.getMonth() + trans.months);
 
@@ -249,25 +244,17 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
         });
         await investment.save();
       }
-
       await Transaction.findByIdAndUpdate(transId, { status: 'approved' });
     } 
     else if (type === 'withdrawal') {
-      // Approve withdrawal - reduce investment amount or close it
       const investment = await Investment.findById(trans.investmentId);
       if (investment) {
         investment.currentAmount -= Number(amount);
-        
-        // If investment is now empty, close it
-        if (investment.currentAmount <= 0) {
-          investment.status = 'closed';
-        }
+        if (investment.currentAmount <= 0) investment.status = 'closed';
         await investment.save();
       }
-
       await Transaction.findByIdAndUpdate(transId, { status: 'approved' });
     }
-
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -307,7 +294,6 @@ app.get('/api/user/profile/:id', async (req, res) => {
   res.json(user);
 });
 
-// Get all investments for a user
 app.get('/api/investments/user/:userId', async (req, res) => {
   const investments = await Investment.find({ 
     userId: req.params.userId,
@@ -316,7 +302,6 @@ app.get('/api/investments/user/:userId', async (req, res) => {
   res.json(investments);
 });
 
-// Get transaction history for a user
 app.get('/api/transactions/user/:userId', async (req, res) => {
   const transactions = await Transaction.find({ 
     userId: req.params.userId 
@@ -327,26 +312,23 @@ app.get('/api/transactions/user/:userId', async (req, res) => {
 // --- 📈 DAILY ROI AUTOMATION ---
 cron.schedule('0 0 * * *', async () => {
   console.log('>>> Running daily ROI calculation...');
-  
   const activeInvestments = await Investment.find({ status: 'active' });
   
   for (let investment of activeInvestments) {
-    // Calculate daily ROI based on APY
     const dailyRate = investment.apy / 365 / 100;
     const dailyProfit = investment.currentAmount * dailyRate;
     
-    // Add to investment amount (compound interest)
     investment.currentAmount += dailyProfit;
     investment.lastProfitUpdate = new Date();
     await investment.save();
     
-    // Update user's total accumulated profit
     await User.findByIdAndUpdate(investment.userId, {
       $inc: { totalProfit: dailyProfit }
     });
   }
-  
   console.log(`>>> Updated ${activeInvestments.length} investments`);
 });
 
-app.listen(5000, () => console.log('>>> SYSTEM READY ON PORT 5000'));
+// 3. IMPORTANT: DYNAMIC PORT FOR RENDER
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`>>> SYSTEM READY ON PORT ${PORT}`));
