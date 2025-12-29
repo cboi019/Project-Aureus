@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import PageTransition from "../components/PageTransition";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from '../utils/api';
 
 // --- CUSTOM AUREUS MODAL COMPONENT ---
 function AureusModal({ isOpen, title, message, onConfirm, onCancel, confirmText = "AUTHORIZE", cancelText = "ABORT" }) {
@@ -295,7 +296,7 @@ export default function AdminPanel() {
                   </div>
                   <button 
                     onClick={async () => {
-                      await fetch(`http://localhost:5000/api/admin/wallets/${w._id}`, { method: 'DELETE' });
+                      await fetch(`${API_BASE_URL}/api/admin/wallets/${w._id}`, { method: 'DELETE' });
                       refreshAllData();
                     }}
                     className="text-zinc-700 text-[8px] font-black hover:text-red-500 transition-colors ml-2 shrink-0"
