@@ -18,6 +18,12 @@ const protocols = [
 ];
 
 export default function AboutDetail() {
+  // --- FIX: SCROLL TO TOP ON LOAD ---
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+  // ----------------------------------
+
   const [txs, setTxs] = useState([
     {
       id: 1,
@@ -65,6 +71,7 @@ export default function AboutDetail() {
       <nav className="w-full max-w-[1400px] mx-auto px-4 sm:px-10 py-8 flex justify-start items-center">
         <Link
           to="/"
+          onClick={() => window.scrollTo(0, 0)} // Also ensure Home starts at top
           className="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] hover:text-white transition-all border-b border-transparent hover:border-amber-500"
         >
           ← BACK TO TERMINAL
@@ -217,8 +224,6 @@ export default function AboutDetail() {
     </div>
   );
 }
-
-/* SUB COMPONENTS */
 
 function DetailSection({ num, title, children }) {
   return (
