@@ -20,25 +20,16 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 .then(() => console.log('>>> 🚀 SYSTEM ONLINE'))
 .catch(err => console.error('❌ DATABASE ERROR:', err.message));
 
-// --- 📧 MAIL ENGINE (PORT 587 CLOUD FIX) ---
-// --- 📧 MAIL ENGINE (THE GMAIL-SERVICE BYPASS) ---
+// --- 📧 MAIL ENGINE (GMAIL SERVICE BYPASS) ---
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // This tells Nodemailer to handle the host/port/handshake automatically
+  service: 'gmail', // Let Nodemailer handle the ports/host automatically
   auth: { 
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS 
   },
   tls: {
+    // This is essential for Render's networking layer
     rejectUnauthorized: false
-  }
-});
-
-// STARTUP DIAGNOSTIC
-transporter.verify((error, success) => {
-  if (error) {
-    console.log("❌ MAIL OFFLINE:", error.message);
-  } else {
-    console.log("✅ MAIL ONLINE: Protocol Ledger Alerts Active.");
   }
 });
 
@@ -128,20 +119,20 @@ app.post('/api/transactions/request', async (req, res) => {
     });
     await trans.save();
 
-    // KILL THE LOADING SCREEN FIRST
+    // ⚡ KILL THE LOADING SCREEN FIRST
     res.json({ success: true });
 
-    // MAIL IN BACKGROUND
-    const action = type === 'withdrawal' ? 'WITHDRAWAL' : 'DEPOSIT';
+    // 📧 MAIL IN BACKGROUND
+    const actionLabel = type === 'withdrawal' ? 'WITHDRAWAL' : 'DEPOSIT';
     transporter.sendMail({
       from: `"AUREUS TERMINAL" <${process.env.EMAIL_USER}>`,
       to: process.env.ADMIN_EMAIL,
-      subject: `🚨 ${action} ALERT: $${amount} - ${user.fullName}`,
+      subject: `🚨 ${actionLabel} ALERT: $${amount} - ${user.fullName}`,
       html: `<div style="background:#000;color:#fff;padding:20px;border:1px solid #fbbf24;">
-                <h2 style="color:#fbbf24">AUREUS LEDGER ALERT</h2>
-                <p>USER: ${user.fullName}</p><p>TYPE: ${action}</p>
-                <p>AMOUNT: $${amount}</p>
-              </div>`
+              <h2 style="color:#fbbf24">AUREUS LEDGER ALERT</h2>
+              <p>USER: ${user.fullName}</p><p>TYPE: ${actionLabel}</p>
+              <p>AMOUNT: $${amount}</p>
+            </div>`
     }).catch(e => console.error("BG MAIL ERROR:", e.message));
 
   } catch (err) { console.error(err); if(!res.headersSent) res.status(500).send("System Error"); }
