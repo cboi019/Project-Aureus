@@ -119,23 +119,35 @@ app.post('/api/transactions/request', async (req, res) => {
     });
     await trans.save();
 
-    // ⚡ KILL THE LOADING SCREEN FIRST
+    // 1. SEND SUCCESS TO FRONTEND IMMEDIATELY
     res.json({ success: true });
 
-    // 📧 MAIL IN BACKGROUND
-    const actionLabel = type === 'withdrawal' ? 'WITHDRAWAL' : 'DEPOSIT';
-    transporter.sendMail({
-      from: `"AUREUS TERMINAL" <${process.env.EMAIL_USER}>`,
-      to: process.env.ADMIN_EMAIL,
-      subject: `🚨 ${actionLabel} ALERT: $${amount} - ${user.fullName}`,
-      html: `<div style="background:#000;color:#fff;padding:20px;border:1px solid #fbbf24;">
-              <h2 style="color:#fbbf24">AUREUS LEDGER ALERT</h2>
-              <p>USER: ${user.fullName}</p><p>TYPE: ${actionLabel}</p>
-              <p>AMOUNT: $${amount}</p>
-            </div>`
-    }).catch(e => console.error("BG MAIL ERROR:", e.message));
+    // 2. MOVE EMAIL TO THE BACKGROUND QUEUE
+    // setImmediate ensures the 'res.json' finishes before this starts
+    setImmediate(() => {
+      const actionLabel = type === 'withdrawal' ? 'WITHDRAWAL' : 'DEPOSIT';
+      transporter.sendMail({
+        from: `"AUREUS TERMINAL" <${process.env.EMAIL_USER}>`,
+        to: process.env.ADMIN_EMAIL,
+        subject: `🚨 ${actionLabel} ALERT: $${amount} - ${user.fullName}`,
+        html: `<div style="background:#000;color:#fff;padding:20px;border:1px solid #fbbf24;">
+                <h2 style="color:#fbbf24">AUREUS LEDGER ALERT</h2>
+                <p>USER: ${user.fullName}</p><p>TYPE: ${actionLabel}</p>
+                <p>AMOUNT: $${amount}</p>
+              </div>`
+      }).then(() => {
+        console.log("✨ Background Email Sent Successfully");
+      }).catch(e => {
+        // This will now log "Connection Timeout" in your console, 
+        // but it WON'T hang the website for the user.
+        console.error("📧 Background Mail Blocked:", e.message);
+      });
+    });
 
-  } catch (err) { console.error(err); if(!res.headersSent) res.status(500).send("System Error"); }
+  } catch (err) { 
+    console.error("❌ Transaction Error:", err); 
+    if(!res.headersSent) res.status(500).send("System Error"); 
+  }
 });
 
 // --- 🛠️ ADMIN PANEL ---
