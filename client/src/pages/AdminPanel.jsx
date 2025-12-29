@@ -56,7 +56,7 @@ export default function AdminPanel() {
   const [wallets, setWallets] = useState([]);
   const [newWallet, setNewWallet] = useState({ name: "", address: "" });
   const [loading, setLoading] = useState(true);
-  const [adminUser, setAdminUser] = useState(null); // Added to store admin info
+  const [adminUser, setAdminUser] = useState(null); 
   const navigate = useNavigate();
 
   // Modal State
@@ -73,9 +73,9 @@ export default function AdminPanel() {
     setLoading(true);
     try {
       const [uRes, pRes, wRes] = await Promise.all([
-        fetch("http://localhost:5000/api/admin/users"),
-        fetch("http://localhost:5000/api/admin/pending-transactions"),
-        fetch("http://localhost:5000/api/wallets")
+        fetch(`${API_BASE_URL}/api/admin/users`),
+        fetch(`${API_BASE_URL}/api/admin/pending-transactions`),
+        fetch(`${API_BASE_URL}/api/wallets`)
       ]);
       setUsers(await uRes.json());
       setPending(await pRes.json());
@@ -90,7 +90,7 @@ export default function AdminPanel() {
   const handleApprove = async (trans) => {
     const loadingToast = toast.loading("EXECUTING PROTOCOL APPROVAL...");
     try {
-      const res = await fetch("http://localhost:5000/api/admin/approve-transaction", {
+      const res = await fetch(`${API_BASE_URL}/api/admin/approve-transaction`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -113,7 +113,7 @@ export default function AdminPanel() {
     setModalConfig({ isOpen: false, type: null, data: null });
     const loadingToast = toast.loading("TERMINATING REQUEST...");
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/transactions/${transId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/transactions/${transId}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -127,21 +127,33 @@ export default function AdminPanel() {
 
   const executeUserDelete = async (id) => {
     setModalConfig({ isOpen: false, type: null, data: null });
-    await fetch(`http://localhost:5000/api/admin/users/${id}`, { method: 'DELETE' });
-    toast.success("ENTITY REMOVED");
-    refreshAllData();
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success("ENTITY REMOVED");
+        refreshAllData();
+      }
+    } catch (err) {
+      toast.error("WIPE FAILED");
+    }
   };
 
   const addWallet = async () => {
     if (!newWallet.name || !newWallet.address) return;
-    await fetch("http://localhost:5000/api/admin/wallets", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newWallet)
-    });
-    setNewWallet({ name: "", address: "" });
-    toast.success("WALLET REGISTERED");
-    refreshAllData();
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/wallets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newWallet)
+      });
+      if (res.ok) {
+        setNewWallet({ name: "", address: "" });
+        toast.success("WALLET REGISTERED");
+        refreshAllData();
+      }
+    } catch (err) {
+      toast.error("GATEWAY REGISTRATION FAILED");
+    }
   };
 
   return (
@@ -177,7 +189,6 @@ export default function AdminPanel() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* ENTITY INFO - Visible on Mobile */}
             <div className="hidden sm:flex flex-col items-end leading-none">
               <span className="text-[7px] text-zinc-500 uppercase font-black tracking-widest mb-1">Entity Authorized</span>
               <span className="text-[10px] text-white font-bold uppercase truncate max-w-[100px]">{adminUser?.fullName}</span>
@@ -215,7 +226,7 @@ export default function AdminPanel() {
                         </span>
                       </div>
                       <div className="flex gap-4">
-                        <p className="text-[11px] font-mono text-white">${p.amount.toLocaleString()}</p>
+                        <p className="text-[11px] font-mono text-white">${p.amount?.toLocaleString()}</p>
                         {p.type === 'deposit' && (
                           <div className="flex gap-3 border-l border-zinc-800 pl-3">
                             <span className="text-[8px] text-amber-500 uppercase font-bold">{p.planName}</span>
@@ -250,7 +261,7 @@ export default function AdminPanel() {
                 <div key={u._id} className="bg-zinc-900/20 border border-zinc-900 p-4 flex justify-between items-center group">
                   <div className="truncate pr-2">
                     <p className="text-[10px] font-bold uppercase text-zinc-300 group-hover:text-white transition-colors truncate">{u.fullName}</p>
-                    <p className="text-[10px] text-zinc-600 font-mono">${u.balance.toLocaleString()}</p>
+                    <p className="text-[10px] text-zinc-600 font-mono">${u.totalProfit?.toLocaleString() || 0}</p>
                   </div>
                   <button 
                     onClick={() => setModalConfig({ isOpen: true, type: 'deleteUser', data: u._id })} 
@@ -296,8 +307,12 @@ export default function AdminPanel() {
                   </div>
                   <button 
                     onClick={async () => {
-                      await fetch(`${API_BASE_URL}/api/admin/wallets/${w._id}`, { method: 'DELETE' });
-                      refreshAllData();
+                      try {
+                        await fetch(`${API_BASE_URL}/api/admin/wallets/${w._id}`, { method: 'DELETE' });
+                        refreshAllData();
+                      } catch (err) {
+                        toast.error("DISCONNECT FAILED");
+                      }
                     }}
                     className="text-zinc-700 text-[8px] font-black hover:text-red-500 transition-colors ml-2 shrink-0"
                   >DISCONNECT</button>
