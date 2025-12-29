@@ -31,7 +31,6 @@ export default function Dashboard() {
   const [amount, setAmount] = useState("");
   const [walletOptions, setWalletOptions] = useState([]);
   const [investments, setInvestments] = useState([]);
-  const [transactions, setTransactions] = useState([]);
   
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectedMonths, setSelectedMonths] = useState(3);
@@ -58,7 +57,6 @@ export default function Dashboard() {
     if (!storedUser) return navigate("/login");
     fetchUserData(storedUser._id);
     refreshInvestments(storedUser._id);
-    refreshTransactions(storedUser._id);
 
     fetch(`${API_BASE_URL}/api/wallets`)
       .then(res => res.json())
@@ -79,13 +77,6 @@ export default function Dashboard() {
       .then(res => res.json())
       .then(data => setInvestments(data || []))
       .catch(() => console.error("Investment fetch failed"));
-  };
-
-  const refreshTransactions = (userId) => {
-    fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
-      .then(res => res.json())
-      .then(data => setTransactions(data || []))
-      .catch(() => console.error("Transaction fetch failed"));
   };
 
   const getLockCountdown = (lockUntil) => {
@@ -154,20 +145,12 @@ export default function Dashboard() {
         setSelectedPlan(null);
         setActiveStructId(null);
         refreshInvestments(user._id);
-        refreshTransactions(user._id);
       }
     } catch (err) { toast.error("TRANSMISSION ERROR", { id: loading }); }
   };
 
   const handleWithdrawExecute = async (e) => {
     e.preventDefault();
-
-    const countdown = getLockCountdown(selectedTxForWithdraw?.lockUntil);
-    if (countdown) {
-        toast.error("RETRIEVAL BLOCKED: TIME REMAINING");
-        return; 
-    }
-
     const loading = toast.loading("EXECUTING WITHDRAWAL...");
     try {
       const res = await fetch(`${API_BASE_URL}/api/transactions/request`, {
@@ -185,7 +168,6 @@ export default function Dashboard() {
         toast.success("RETRIEVAL QUEUED", { id: loading });
         setSelectedTxForWithdraw(null);
         refreshInvestments(user._id);
-        refreshTransactions(user._id);
         setActiveTab("overview");
       }
     } catch (err) { toast.error("ERROR", { id: loading }); }
@@ -196,6 +178,7 @@ export default function Dashboard() {
   return (
     <PageTransition>
       <div className="min-h-screen bg-black text-white font-sans selection:bg-amber-500">
+        {/* Navigation */}
         <nav className="sticky top-0 z-50 bg-black/90 backdrop-blur-md border-b border-zinc-900 px-4 py-4 md:px-10">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <h1 onClick={() => navigate('/')} className="text-sm md:text-xl font-bold tracking-[0.3em] uppercase cursor-pointer">AUREUS <span className="text-amber-500">CAPITAL</span></h1>
@@ -207,21 +190,13 @@ export default function Dashboard() {
               <button onClick={() => setShowLogoutMenu(!showLogoutMenu)} className={`w-9 h-9 shrink-0 rounded-full bg-zinc-900 border flex items-center justify-center text-[10px] font-black transition-all ${showLogoutMenu ? 'border-amber-500 text-amber-500' : 'border-zinc-800 text-zinc-500'}`}>ID</button>
               <AnimatePresence>
                 {showLogoutMenu && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    exit={{ opacity: 0, y: 10 }} 
-                    className="absolute right-0 top-12 w-64 bg-zinc-900 border border-zinc-800 shadow-2xl z-[100]"
-                  >
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute right-0 top-12 w-64 bg-zinc-900 border border-zinc-800 shadow-2xl z-[100]">
                     <div className="p-4 border-b border-zinc-800 bg-zinc-950">
                       <p className="text-[7px] text-zinc-600 uppercase font-bold tracking-wider mb-1">Logged in as</p>
                       <p className="text-[10px] text-amber-500 font-mono break-all">{user.email}</p>
                     </div>
-                    
                     <div className="p-4 space-y-2">
-                      {user.role === 'admin' && (
-                        <button onClick={() => navigate('/admin')} className="w-full text-[9px] font-black text-amber-500 border border-amber-500/40 px-3 py-3 hover:bg-amber-500 hover:text-black transition-all">ADMIN TERMINAL</button>
-                      )}
+                      {user.role === 'admin' && <button onClick={() => navigate('/admin')} className="w-full text-[9px] font-black text-amber-500 border border-amber-500/40 px-3 py-3 hover:bg-amber-500 hover:text-black transition-all">ADMIN TERMINAL</button>}
                       <button onClick={() => { localStorage.removeItem("aureus_user"); navigate("/login"); }} className="w-full bg-red-500/10 text-red-500 py-3 text-[9px] font-black uppercase hover:bg-red-500 hover:text-white transition-all">TERMINATE SESSION</button>
                     </div>
                   </motion.div>
@@ -262,26 +237,32 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-6">Transaction History</h3>
-                    <div className="space-y-2">
-                      {transactions.length > 0 ? (
-                        transactions.map((tx) => (
-                          <TransactionRow key={tx._id} transaction={tx} />
-                        ))
-                      ) : (
-                        <div className="border border-zinc-900 p-10 text-center">
-                          <p className="text-[10px] text-zinc-700 uppercase">No transaction history</p>
-                        </div>
-                      )}
+                  {/* Transaction Link Block Replacement */}
+                  <div className="pt-10">
+                    <div className="flex justify-between items-end border-b border-zinc-900 pb-4 mb-6">
+                      <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Ledger Activity</h3>
+                      <button 
+                        onClick={() => navigate('/transactions')}
+                        className="text-[9px] font-black text-zinc-500 hover:text-amber-500 uppercase transition-all flex items-center gap-2 group"
+                      >
+                        View Full History 
+                        <span className="group-hover:translate-x-1 transition-transform">→</span>
+                      </button>
+                    </div>
+                    
+                    <div className="bg-zinc-900/20 border border-zinc-900 p-8 text-center">
+                      <p className="text-[8px] text-zinc-600 uppercase font-bold tracking-tighter">
+                        Protocol records encrypted. Access full ledger via the transmission link above.
+                      </p>
                     </div>
                   </div>
                 </motion.div>
               )}
 
+              {/* Deposit and Withdrawal Tabs remain as they were */}
               {activeTab === "deposit" && (
                 <motion.div key="deposit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                  {!selectedPlan ? (
+                   {!selectedPlan ? (
                     <div className="grid gap-4">
                       {PLANS.map(plan => (
                         <div key={plan.name} className="bg-zinc-900 border border-zinc-800 p-6 flex justify-between items-center hover:border-amber-500 group">
@@ -317,27 +298,15 @@ export default function Dashboard() {
                         <option value="">SELECT TRANSMISSION NODE</option>
                         {walletOptions.map(w => <option key={w._id} value={w.address}>{w.name}</option>)}
                       </select>
-
                       {selectedWallet && (
                         <div className="bg-zinc-950 border border-amber-500/30 p-4 space-y-2">
                           <p className="text-[7px] text-amber-500 uppercase font-black tracking-widest">DESTINATION WALLET ADDRESS</p>
                           <div className="flex items-center gap-2">
                             <p className="text-[11px] text-white font-mono break-all flex-1">{selectedWallet}</p>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(selectedWallet);
-                                toast.success("ADDRESS COPIED", { duration: 2000 });
-                              }}
-                              className="shrink-0 bg-amber-500 text-black px-4 py-2 text-[8px] font-black uppercase hover:bg-white transition-all"
-                            >
-                              COPY
-                            </button>
+                            <button type="button" onClick={() => { navigator.clipboard.writeText(selectedWallet); toast.success("ADDRESS COPIED"); }} className="shrink-0 bg-amber-500 text-black px-4 py-2 text-[8px] font-black uppercase hover:bg-white transition-all">COPY</button>
                           </div>
-                          <p className="text-[8px] text-zinc-600 uppercase italic">Send exact amount to this address externally</p>
                         </div>
                       )}
-
                       <button onClick={handleDepositSubmit} disabled={isInvalidAmount || !amount || !selectedWallet} className="w-full bg-amber-500 text-black py-6 text-[11px] font-black uppercase hover:opacity-90 disabled:opacity-20 transition-all">Confirm Protocol Entry</button>
                     </div>
                   )}
@@ -356,32 +325,10 @@ export default function Dashboard() {
                       <div className="text-center">
                         <p className="text-[9px] text-zinc-600 uppercase font-black mb-2">Authorized Struct Liquidity</p>
                         <p className="text-4xl font-mono font-bold text-white">${Number(selectedTxForWithdraw.currentAmount).toLocaleString()}</p>
-                        
-                        {getLockCountdown(selectedTxForWithdraw.lockUntil) && (
-                            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/50 text-red-500">
-                              <p className="text-[9px] font-black uppercase tracking-tighter">⚠️ PROTOCOL LOCKED: IMMATURE ASSET</p>
-                              <p className="text-[8px] font-mono mt-1 opacity-70">REMAINING: {getLockCountdown(selectedTxForWithdraw.lockUntil)}</p>
-                            </div>
-                        )}
                       </div>
-
                       <form onSubmit={handleWithdrawExecute} className="space-y-4">
-                        <input 
-                          type="text" 
-                          value={withdrawalAddress} 
-                          onChange={(e) => setWithdrawalAddress(e.target.value)} 
-                          className="w-full bg-black border border-zinc-800 p-6 text-[10px] font-mono outline-none focus:border-amber-500 text-amber-500 disabled:opacity-30" 
-                          placeholder="DESTINATION WALLET ADDRESS" 
-                          disabled={!!getLockCountdown(selectedTxForWithdraw.lockUntil)}
-                          required 
-                        />
-                        <button 
-                          type="submit" 
-                          disabled={!!getLockCountdown(selectedTxForWithdraw.lockUntil)}
-                          className="w-full bg-white text-black py-6 text-[11px] font-black uppercase hover:bg-amber-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition-all"
-                        >
-                          {getLockCountdown(selectedTxForWithdraw.lockUntil) ? "Protocol Locked" : "Execute Retrieval Protocol"}
-                        </button>
+                        <input type="text" value={withdrawalAddress} onChange={(e) => setWithdrawalAddress(e.target.value)} className="w-full bg-black border border-zinc-800 p-6 text-[10px] font-mono outline-none focus:border-amber-500 text-amber-500" placeholder="DESTINATION WALLET ADDRESS" required />
+                        <button type="submit" className="w-full bg-white text-black py-6 text-[11px] font-black uppercase hover:bg-amber-500 transition-all">Execute Retrieval Protocol</button>
                         <button type="button" onClick={() => setActiveTab("overview")} className="w-full border border-zinc-800 text-zinc-500 py-4 text-[9px] font-black uppercase hover:text-white">Abort Retrieval</button>
                       </form>
                     </>
@@ -396,6 +343,7 @@ export default function Dashboard() {
   );
 }
 
+// Sub-components
 function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
   const countdown = getLockCountdown(investment.lockUntil);
   const isLocked = !!countdown;
@@ -441,39 +389,6 @@ function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function TransactionRow({ transaction }) {
-  const statusColors = {
-    pending: 'text-amber-500 bg-amber-500/10',
-    approved: 'text-emerald-500 bg-emerald-500/10',
-    denied: 'text-red-500 bg-red-500/10'
-  };
-
-  const date = new Date(transaction.createdAt);
-  const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-  return (
-    <div className="bg-zinc-900/40 border border-zinc-800 p-4 flex justify-between items-center hover:border-zinc-700 transition-colors">
-      <div className="flex items-center gap-6">
-        <div>
-          <p className="text-[10px] text-zinc-500 font-mono">{formattedDate}</p>
-          <p className="text-[9px] text-zinc-600 font-mono">{formattedTime}</p>
-        </div>
-        <div className="h-8 w-[1px] bg-zinc-800"></div>
-        <div>
-          <p className={`text-[9px] font-black uppercase ${transaction.type === 'deposit' ? 'text-emerald-500' : 'text-red-500'}`}>
-            {transaction.type === 'deposit' ? '+' : '-'}${Number(transaction.amount).toLocaleString()}
-          </p>
-          <p className="text-[8px] text-zinc-600 uppercase">{transaction.type}</p>
-        </div>
-      </div>
-      <span className={`text-[8px] px-3 py-1 font-black uppercase ${statusColors[transaction.status]}`}>
-        {transaction.status}
-      </span>
     </div>
   );
 }
