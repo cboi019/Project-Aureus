@@ -61,7 +61,7 @@ export default function AboutDetail() {
 
   return (
     <div className="w-full min-h-screen bg-[#050505] text-white font-sans selection:bg-amber-500 overflow-x-hidden">
-      {/* NAV - REMOVED FANCY BUTTON */}
+      {/* NAV */}
       <nav className="w-full max-w-[1400px] mx-auto px-4 sm:px-10 py-8 flex justify-start items-center">
         <Link
           to="/"
@@ -165,30 +165,45 @@ export default function AboutDetail() {
         {/* DETAILS */}
         <div className="space-y-24 md:space-y-32">
           <DetailSection num="01" title="DECENTRALIZED AGGREGATION">
-            Aureus utilizes{' '}
-            <span className="text-white">Yearn Finance (yVaults)</span> to
-            automate the shifting of capital.
+            Aureus utilizes <span className="text-white">Yearn Finance (yVaults)</span> and 
+            sophisticated smart contract controllers to automate the tactical shifting of 
+            capital across a curated index of high-integrity protocols. By leveraging 
+            non-custodial algorithmic rebalancing, our engine scans the Ethereum virtual 
+            machine for optimized lending rates and liquidity incentives, ensuring your 
+            assets are always positioned in the most efficient risk-adjusted pools without 
+            manual intervention.
           </DetailSection>
 
           <DetailSection num="02" title="CENTRALIZED EFFICIENCY">
-            We bridge DeFi returns with CeFi Yield Aggregators like{' '}
-            <span className="text-white font-bold italic uppercase">
-              Binance Institutional
-            </span>
-            .
+            We bridge deep-on-chain returns with elite <span className="text-white font-bold italic uppercase">Binance Institutional</span> yield 
+            aggregators and prime brokerage liquidity. This hybrid architecture allows 
+            Aureus to tap into off-chain arbitrage opportunities and market-neutral 
+            strategies that are traditionally reserved for top-tier hedge funds. By 
+            synthesizing CeFi reliability with DeFi transparency, we create a proprietary 
+            liquidity fly-wheel designed to maintain performance even during periods of 
+            extreme market volatility.
           </DetailSection>
 
           <section className="border-l-4 border-amber-500 pl-6 sm:pl-16 md:pl-12">
             <h2 className="text-3xl sm:text-6xl font-bold uppercase italic tracking-tighter mb-8 leading-none">
               03. REVENUE
             </h2>
-            <p className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.3em] leading-loose max-w-xl mb-12">
-              10% Performance fee on{' '}
-              <span className="text-white font-black italic underline underline-offset-8 decoration-amber-500/50">
-                realized profits only
-              </span>
-              .
-            </p>
+            <div className="space-y-6 max-w-3xl mb-12">
+              <p className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.3em] leading-loose">
+                Our interests are strictly aligned with yours. Aureus operates on a high-water mark 
+                philosophy, meaning we only benefit when you do. We apply a flat 10% performance fee on{' '}
+                <span className="text-white font-black italic underline underline-offset-8 decoration-amber-500/50">
+                  realized profits only
+                </span>
+                .
+              </p>
+              <p className="text-zinc-500 text-[10px] sm:text-xs uppercase tracking-[0.3em] leading-loose">
+                There are zero management fees, zero entry loads, and zero hidden exit costs. 
+                Our infrastructure costs are absorbed by the system, ensuring that the 
+                majority of every yield cycle is compounded directly back into your primary 
+                account balance.
+              </p>
+            </div>
 
             <Link
               to="/register"
