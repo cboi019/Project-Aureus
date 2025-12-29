@@ -24,11 +24,13 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 const transporter = nodemailer.createTransport({
   host: 'smtp-relay.brevo.com',
   port: 587,
-  secure: false, 
+  secure: false, // Keep this false for 587
+  requireTLS: true, // <--- Add this line
   auth: { 
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS 
-  }
+  },
+  connectionTimeout: 10000 // Give it 10 seconds before it gives up
 });
 
 // STARTUP DIAGNOSTIC
