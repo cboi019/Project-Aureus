@@ -20,16 +20,14 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 .then(() => console.log('>>> 🚀 SYSTEM ONLINE'))
 .catch(err => console.error('❌ DATABASE ERROR:', err.message));
 
-// --- 📧 MAIL ENGINE (GMAIL SERVICE BYPASS) ---
+// --- 📧 MAIL ENGINE (BREVO CLOUD RELAY) ---
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Let Nodemailer handle the ports/host automatically
+  host: 'smtp-relay.brevo.com',
+  port: 587,
+  secure: false, 
   auth: { 
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS 
-  },
-  tls: {
-    // This is essential for Render's networking layer
-    rejectUnauthorized: false
+    user: '9ef7ae001@smtp-brevo.com', 
+    pass: 'xsmtpsib-e2d309d31291a15f98019d1e9ad6cabf80716b35e423d42ca80c587cac205392-LE0AMIpXcj0UOglV'
   }
 });
 
