@@ -22,7 +22,15 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL
+  auth: { 
+    user: process.env.EMAIL_USER, 
+    pass: process.env.EMAIL_PASS 
+  },
+  debug: true, // This will show us the exact SMTP conversation
+  logger: true  // This prints the error to your terminal/Render logs
 });
 
 // --- 🏗️ SCHEMAS ---
