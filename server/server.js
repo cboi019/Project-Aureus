@@ -1,4 +1,4 @@
-// server.js ..
+// server.js
 require('dotenv').config(); 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -20,17 +20,17 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 .then(() => console.log('>>> 🚀 SYSTEM ONLINE'))
 .catch(err => console.error('❌ DATABASE ERROR:', err.message));
 
-// --- 📧 MAIL ENGINE (BREVO CLOUD RELAY) ---
+// --- 📧 MAIL ENGINE (GMAIL SERVICE BYPASS) ---
 const transporter = nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com',
-  port: 465,            // Switch from 587 to 465
-  secure: true,          // Switch from false to true
+  service: 'gmail', // Let Nodemailer handle the ports/host automatically
   auth: { 
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS 
   },
-  connectionTimeout: 20000, // Double the timeout to 20 seconds
-  greetingTimeout: 20000
+  tls: {
+    // This is essential for Render's networking layer
+    rejectUnauthorized: false
+  }
 });
 
 // STARTUP DIAGNOSTIC
