@@ -23,14 +23,14 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 // --- 📧 MAIL ENGINE (BREVO CLOUD RELAY) ---
 const transporter = nodemailer.createTransport({
   host: 'smtp-relay.brevo.com',
-  port: 587,
-  secure: false, // Keep this false for 587
-  requireTLS: true, // <--- Add this line
+  port: 465,            // Switch from 587 to 465
+  secure: true,          // Switch from false to true
   auth: { 
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS 
   },
-  connectionTimeout: 10000 // Give it 10 seconds before it gives up
+  connectionTimeout: 20000, // Double the timeout to 20 seconds
+  greetingTimeout: 20000
 });
 
 // STARTUP DIAGNOSTIC
