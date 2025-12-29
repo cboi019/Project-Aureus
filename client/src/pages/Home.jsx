@@ -10,7 +10,7 @@ const generateFakePayouts = (count) => {
   return Array.from({ length: count }).map((_, i) => {
     const address = `${prefixes[Math.floor(Math.random() * prefixes.length)]}${Math.random().toString(16).slice(2, 6)}...${Math.random().toString(16).slice(2, 6)}`;
     
-    // Range updated: $450 to $100,000
+    // Range: $450 to $100,000
     const rawAmount = Math.random() * (100000 - 450) + 450;
     const amountStr = rawAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     
@@ -19,7 +19,7 @@ const generateFakePayouts = (count) => {
       id: i,
       address: address.toUpperCase(),
       amount: `$${amountStr}`,
-      isHighValue: rawAmount > 50000, // Highlight payouts over 50k
+      isHighValue: rawAmount > 50000, 
       status: statuses[Math.floor(Math.random() * statuses.length)],
       time: `${time}m ago`
     };
@@ -28,11 +28,20 @@ const generateFakePayouts = (count) => {
 
 const LivePayoutLedger = () => {
   const payouts = useMemo(() => generateFakePayouts(50), []);
-  const displayPayouts = [...payouts, ...payouts]; // For infinite scroll
+  const displayPayouts = [...payouts, ...payouts]; 
+  const [activeNodes, setActiveNodes] = useState(12);
+
+  useEffect(() => {
+    // Logic to change node count every 24 hours based on date
+    const today = new Date();
+    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+    // Generates a consistent number between 24 and 32 for the entire day
+    const dailyNodes = 24 + (dayOfYear % 9); 
+    setActiveNodes(dailyNodes);
+  }, []);
 
   return (
     <div className="bg-black border-y border-zinc-900 overflow-hidden py-6 relative">
-      {/* Visual Depth Overlays */}
       <div className="absolute top-0 left-0 w-full h-12 bg-gradient-to-b from-black via-black/80 to-transparent z-10"></div>
       <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black via-black/80 to-transparent z-10"></div>
       
@@ -44,14 +53,16 @@ const LivePayoutLedger = () => {
           </h3>
           <p className="text-[7px] text-zinc-600 uppercase tracking-widest font-bold">Protocol: Global-Liquidity-V4</p>
         </div>
-        <span className="text-[8px] text-zinc-500 font-mono uppercase bg-zinc-900 px-3 py-1 border border-zinc-800">Verified Nodes: 12 Active</span>
+        <span className="text-[8px] text-zinc-400 font-mono uppercase bg-zinc-900/50 px-3 py-1 border border-zinc-800">
+          Verified Nodes: {activeNodes} Active
+        </span>
       </div>
 
       <div className="h-64 overflow-hidden relative">
         <motion.div 
           animate={{ y: [0, -2800] }} 
           transition={{ 
-            duration: 70, 
+            duration: 120, // Increased duration for slower, smoother scroll
             repeat: Infinity, 
             ease: "linear" 
           }}
@@ -150,7 +161,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- LIVE PAYOUT LEDGER SECTION --- */}
       <LivePayoutLedger />
 
       <motion.section 
