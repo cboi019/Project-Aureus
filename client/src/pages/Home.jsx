@@ -1,4 +1,3 @@
-// Home.jsx
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useMemo } from 'react';
@@ -9,11 +8,8 @@ const generateFakePayouts = (count) => {
   const prefixes = ['0X', 'BC1', 'TRX', 'BNB'];
   return Array.from({ length: count }).map((_, i) => {
     const address = `${prefixes[Math.floor(Math.random() * prefixes.length)]}${Math.random().toString(16).slice(2, 6)}...${Math.random().toString(16).slice(2, 6)}`;
-    
-    // Range: $450 to $100,000
     const rawAmount = Math.random() * (100000 - 450) + 450;
     const amountStr = rawAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    
     const time = Math.floor(Math.random() * 59) + 1;
     return {
       id: i,
@@ -32,10 +28,8 @@ const LivePayoutLedger = () => {
   const [activeNodes, setActiveNodes] = useState(12);
 
   useEffect(() => {
-    // Logic to change node count every 24 hours based on date
     const today = new Date();
     const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-    // Generates a consistent number between 24 and 32 for the entire day
     const dailyNodes = 24 + (dayOfYear % 9); 
     setActiveNodes(dailyNodes);
   }, []);
@@ -62,7 +56,7 @@ const LivePayoutLedger = () => {
         <motion.div 
           animate={{ y: [0, -2800] }} 
           transition={{ 
-            duration: 120, // Increased duration for slower, smoother scroll
+            duration: 120, 
             repeat: Infinity, 
             ease: "linear" 
           }}
@@ -89,7 +83,6 @@ const Counter = ({ target, duration = 2, prefix = "" }) => {
   useEffect(() => {
     let start = 0;
     const end = parseInt(target.replace(/[^0-9]/g, ""));
-    const totalMiliseconds = duration * 1000;
     const timer = setInterval(() => {
       start += Math.ceil(end / 100);
       if (start >= end) {
@@ -101,7 +94,6 @@ const Counter = ({ target, duration = 2, prefix = "" }) => {
     }, 30);
     return () => clearInterval(timer);
   }, [target, duration]);
-
   return <span>{prefix}{count.toLocaleString()}{target.includes('+') ? '+' : ''}{target.includes('M') ? 'M' : ''}</span>;
 };
 
@@ -118,6 +110,14 @@ export default function Home() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
   };
 
+  const scrollToAbout = (e) => {
+    e.preventDefault();
+    const element = document.getElementById('about');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-amber-500 selection:text-black overflow-x-hidden">
       
@@ -127,7 +127,7 @@ export default function Home() {
           <span className="text-[7px] text-amber-500 tracking-[0.4em] uppercase font-black">Capital Management</span>
         </div>
         <div className="flex items-center gap-6">
-          <a href="#about" className="text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest">About</a>
+          <a href="#about" onClick={scrollToAbout} className="text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest cursor-pointer">About</a>
           <Link to="/login" className="text-[9px] border border-zinc-800 px-6 py-2 uppercase font-black hover:bg-white hover:text-black transition-all">Client Login</Link>
         </div>
       </nav>
