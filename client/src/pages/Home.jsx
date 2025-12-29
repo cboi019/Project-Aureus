@@ -1,17 +1,84 @@
 // Home.jsx
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+
+// --- FAKE DATA GENERATOR ---
+const generateFakePayouts = (count) => {
+  const statuses = ['PROCESSED', 'VERIFIED', 'SETTLED', 'AUTHORIZED'];
+  const prefixes = ['0X', 'BC1', 'TRX', 'BNB'];
+  return Array.from({ length: count }).map((_, i) => {
+    const address = `${prefixes[Math.floor(Math.random() * prefixes.length)]}${Math.random().toString(16).slice(2, 6)}...${Math.random().toString(16).slice(2, 6)}`;
+    
+    // Range updated: $450 to $100,000
+    const rawAmount = Math.random() * (100000 - 450) + 450;
+    const amountStr = rawAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    const time = Math.floor(Math.random() * 59) + 1;
+    return {
+      id: i,
+      address: address.toUpperCase(),
+      amount: `$${amountStr}`,
+      isHighValue: rawAmount > 50000, // Highlight payouts over 50k
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      time: `${time}m ago`
+    };
+  });
+};
+
+const LivePayoutLedger = () => {
+  const payouts = useMemo(() => generateFakePayouts(50), []);
+  const displayPayouts = [...payouts, ...payouts]; // For infinite scroll
+
+  return (
+    <div className="bg-black border-y border-zinc-900 overflow-hidden py-6 relative">
+      {/* Visual Depth Overlays */}
+      <div className="absolute top-0 left-0 w-full h-12 bg-gradient-to-b from-black via-black/80 to-transparent z-10"></div>
+      <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black via-black/80 to-transparent z-10"></div>
+      
+      <div className="max-w-7xl mx-auto px-6 mb-6 flex justify-between items-end">
+        <div>
+          <h3 className="text-[9px] font-black text-amber-500 uppercase tracking-[0.4em] flex items-center gap-2 mb-1">
+            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
+            Live Transmission Ledger
+          </h3>
+          <p className="text-[7px] text-zinc-600 uppercase tracking-widest font-bold">Protocol: Global-Liquidity-V4</p>
+        </div>
+        <span className="text-[8px] text-zinc-500 font-mono uppercase bg-zinc-900 px-3 py-1 border border-zinc-800">Verified Nodes: 12 Active</span>
+      </div>
+
+      <div className="h-64 overflow-hidden relative">
+        <motion.div 
+          animate={{ y: [0, -2800] }} 
+          transition={{ 
+            duration: 70, 
+            repeat: Infinity, 
+            ease: "linear" 
+          }}
+          className="space-y-1"
+        >
+          {displayPayouts.map((p, i) => (
+            <div key={i} className="grid grid-cols-4 items-center px-6 py-3 border-y border-zinc-900/20 bg-[#080808]/30 hover:bg-zinc-900/80 transition-colors group">
+              <span className="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300 transition-colors">{p.address}</span>
+              <span className={`text-[11px] font-mono font-bold ${p.isHighValue ? 'text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]' : 'text-emerald-500'}`}>
+                {p.amount}
+              </span>
+              <span className="text-[8px] font-black text-zinc-600 text-center uppercase tracking-tighter group-hover:text-zinc-400 transition-colors">{p.status}</span>
+              <span className="text-[9px] font-mono text-zinc-500 text-right">{p.time}</span>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    </div>
+  );
+};
 
 const Counter = ({ target, duration = 2, prefix = "" }) => {
   const [count, setCount] = useState(0);
-
   useEffect(() => {
     let start = 0;
     const end = parseInt(target.replace(/[^0-9]/g, ""));
     const totalMiliseconds = duration * 1000;
-    const incrementTime = totalMiliseconds / end;
-
     const timer = setInterval(() => {
       start += Math.ceil(end / 100);
       if (start >= end) {
@@ -21,9 +88,8 @@ const Counter = ({ target, duration = 2, prefix = "" }) => {
         setCount(start);
       }
     }, 30);
-
     return () => clearInterval(timer);
-  }, [target]);
+  }, [target, duration]);
 
   return <span>{prefix}{count.toLocaleString()}{target.includes('+') ? '+' : ''}{target.includes('M') ? 'M' : ''}</span>;
 };
@@ -50,21 +116,13 @@ export default function Home() {
           <span className="text-[7px] text-amber-500 tracking-[0.4em] uppercase font-black">Capital Management</span>
         </div>
         <div className="flex items-center gap-6">
-          {/* Smooth Scroll Link */}
-          <a href="#about" className="text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest">
-            About
-          </a>
-          <Link to="/login" className="text-[9px] border border-zinc-800 px-6 py-2 uppercase font-black hover:bg-white hover:text-black transition-all">
-            Client Login
-          </Link>
+          <a href="#about" className="text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest">About</a>
+          <Link to="/login" className="text-[9px] border border-zinc-800 px-6 py-2 uppercase font-black hover:bg-white hover:text-black transition-all">Client Login</Link>
         </div>
       </nav>
 
       <section className="relative pt-24 pb-32 px-6">
-        <motion.div 
-          initial="hidden" whileInView="visible" viewport={{ once: true }} variants={slideUp}
-          className="max-w-6xl mx-auto text-center relative z-10"
-        >
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={slideUp} className="max-w-6xl mx-auto text-center relative z-10">
           <h4 className="text-amber-500 text-[10px] font-black tracking-[0.8em] uppercase mb-6">Tier-1 Liquidity Terminal</h4>
           <h1 className="text-5xl md:text-9xl font-bold tracking-tighter uppercase leading-[0.9] mb-8">
             QUANTUM <br/> <span className="text-zinc-800">GROWTH.</span>
@@ -92,9 +150,12 @@ export default function Home() {
         </div>
       </section>
 
+      {/* --- LIVE PAYOUT LEDGER SECTION --- */}
+      <LivePayoutLedger />
+
       <motion.section 
-        id="about"
-        initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={slideUp}
+        id="about" 
+        initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={slideUp} 
         className="py-32 px-6 max-w-6xl mx-auto"
       >
         <div className="grid md:grid-cols-2 gap-20 items-center">
@@ -106,15 +167,12 @@ export default function Home() {
             <div className="h-[1px] w-20 bg-amber-500/50 mb-6"></div>
             <p className="text-zinc-400 text-[10px] uppercase tracking-[0.2em] leading-relaxed">
               We focus on risk-adjusted returns, ensuring investor capital is protected by automated delta-neutral hedging protocols.
-              {/* --- NEW READ MORE LINK --- */}
-              <Link to="/about-protocol" className="ml-2 text-amber-500 hover:text-white transition-colors font-black border-b border-amber-500/30 pb-0.5 whitespace-nowrap">
-                READ MORE →
-              </Link>
+              <Link to="/about-protocol" className="ml-2 text-amber-500 hover:text-white transition-colors font-black border-b border-amber-500/30 pb-0.5 whitespace-nowrap">READ MORE →</Link>
             </p>
           </div>
           <div className="bg-[#0a0a0a] border border-zinc-800 p-10 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-100 transition-opacity">
-               <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping"></div>
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-ping"></div>
             </div>
             <h3 className="text-white text-[10px] font-black uppercase mb-8 tracking-widest border-b border-zinc-900 pb-4">Protocol Specs</h3>
             <ul className="space-y-8">
@@ -135,16 +193,11 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {/* Infrastructure and Footer sections remain unchanged */}
       <section className="bg-[#030303] py-32 px-6 border-t border-zinc-900">
         <div className="max-w-6xl mx-auto">
-          <motion.div 
-            initial="hidden" whileInView="visible" viewport={{ once: true }} variants={slideUp}
-            className="text-center mb-20"
-          >
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={slideUp} className="text-center mb-20">
             <h3 className="text-4xl font-bold uppercase tracking-tighter italic">Infrastructure</h3>
           </motion.div>
-          
           <div className="grid md:grid-cols-3 gap-6">
             <FeatureCard title="Secure Uplink" delay={0.1} desc="End-to-end military grade encryption for all financial transmissions." />
             <FeatureCard title="Instant Settlement" delay={0.2} desc="Withdrawals are processed via automated smart-contract gateways." />
