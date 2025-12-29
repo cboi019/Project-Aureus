@@ -1,5 +1,3 @@
-//server.js
-
 // 1. Adjusted dotenv for production flexibility
 require('dotenv').config(); 
 const express = require('express');
@@ -81,6 +79,16 @@ const TransactionSchema = new mongoose.Schema({
 const Transaction = mongoose.model('Transaction', TransactionSchema);
 
 const Wallet = mongoose.model('Wallet', new mongoose.Schema({ name: String, address: String }));
+
+// --- 🏥 HEALTH CHECK ROUTE ---
+app.get('/', (req, res) => {
+  res.json({ 
+    status: '🚀 AUREUS API ONLINE', 
+    message: 'Backend is running successfully',
+    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // --- 🔐 AUTHENTICATION (KEPT EXACTLY AS PROVIDED) ---
 
