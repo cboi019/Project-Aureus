@@ -20,29 +20,27 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 .then(() => console.log('>>> 🚀 SYSTEM ONLINE'))
 .catch(err => console.error('❌ DATABASE ERROR:', err.message));
 
-// --- 📧 MAIL ENGINE (RENDER-SAFE SMTP) ---
+// --- 📧 MAIL ENGINE (GMAIL SERVICE BYPASS) ---
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS // MUST be App Password
+  service: 'gmail', // Let Nodemailer handle the ports/host automatically
+  auth: { 
+    user: process.env.EMAIL_USER, 
+    pass: process.env.EMAIL_PASS 
   },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000
+  tls: {
+    // This is essential for Render's networking layer
+    rejectUnauthorized: false
+  }
 });
 
 // STARTUP DIAGNOSTIC
-(async () => {
-  try {
-    await transporter.verify();
-    console.log('✅ MAIL ONLINE: Protocol Ledger Alerts Active.');
-  } catch (err) {
-    console.error('❌ MAIL OFFLINE:', err.message);
+transporter.verify((error, success) => {
+  if (error) {
+    console.log("❌ MAIL OFFLINE:", error.message);
+  } else {
+    console.log("✅ MAIL ONLINE: Protocol Ledger Alerts Active.");
   }
-})();
+});
 
 // --- 🏗️ SCHEMAS ---
 const User = mongoose.model('User', new mongoose.Schema({
@@ -83,179 +81,113 @@ const Wallet = mongoose.model('Wallet', new mongoose.Schema({ name: String, addr
 
 // --- 🏥 HEALTH CHECK ---
 app.get('/', (req, res) => {
-  res.json({ 
-    status: '🚀 AUREUS API ONLINE', 
-    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected' 
-  });
+  res.json({ status: '🚀 AUREUS API ONLINE', database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected' });
 });
 
-// --- 🔐 AUTH ---
+// --- 🔐 AUTHENTICATION ---
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
     const cleanEmail = email.toLowerCase().trim();
-    if (await User.findOne({ email: cleanEmail })) {
-      return res.status(400).json({ message: "User already exists" });
-    }
+    if (await User.findOne({ email: cleanEmail })) return res.status(400).json({ message: "User already exists" });
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ fullName, email: cleanEmail, password: hashedPassword });
     await user.save();
     res.json({ success: true, user });
-  } catch {
-    res.status(500).json({ error: "Registration failed" });
-  }
+  } catch (err) { res.status(500).json({ error: "Registration failed" }); }
 });
 
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(400).send("Invalid Credentials");
-    }
+    if (!user || !await bcrypt.compare(password, user.password)) return res.status(400).send("Invalid Credentials");
     const { password: _, ...userData } = user._doc;
     res.json({ user: userData });
-  } catch {
-    res.status(500).send("Login error");
-  }
+  } catch (err) { res.status(500).send("Login error"); }
 });
 
 // --- 💸 TRANSACTION REQUESTS ---
 app.post('/api/transactions/request', async (req, res) => {
   const { userId, amount, type, planName, targetWallet, userWallet, months, parentStructId } = req.body;
-
   try {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
     const trans = new Transaction({ 
-      userId,
-      amount,
-      type,
-      planName,
-      targetWallet,
-      userWallet,
-      months,
-      investmentId: parentStructId || null
+      userId, amount, type, planName, targetWallet, userWallet, months, investmentId: parentStructId || null 
     });
-
     await trans.save();
 
-    // 📧 SEND EMAIL (BLOCKING BUT SAFE)
-    try {
-      const actionLabel = type === 'withdrawal' ? 'WITHDRAWAL' : 'DEPOSIT';
-
-      await transporter.sendMail({
-        from: `"AUREUS TERMINAL" <${process.env.EMAIL_USER}>`,
-        to: process.env.ADMIN_EMAIL,
-        subject: `🚨 ${actionLabel} ALERT: $${amount} - ${user.fullName}`,
-        html: `
-          <div style="background:#000;color:#fff;padding:20px;border:1px solid #fbbf24;">
-            <h2 style="color:#fbbf24">AUREUS LEDGER ALERT</h2>
-            <p>USER: ${user.fullName}</p>
-            <p>TYPE: ${actionLabel}</p>
-            <p>AMOUNT: $${amount}</p>
-          </div>
-        `
-      });
-    } catch (mailErr) {
-      console.error('❌ EMAIL FAILED:', mailErr.message);
-      // transaction still succeeds
-    }
-
+    // ⚡ KILL THE LOADING SCREEN FIRST
     res.json({ success: true });
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("System Error");
-  }
+    // 📧 MAIL IN BACKGROUND
+    const actionLabel = type === 'withdrawal' ? 'WITHDRAWAL' : 'DEPOSIT';
+    transporter.sendMail({
+      from: `"AUREUS TERMINAL" <${process.env.EMAIL_USER}>`,
+      to: process.env.ADMIN_EMAIL,
+      subject: `🚨 ${actionLabel} ALERT: $${amount} - ${user.fullName}`,
+      html: `<div style="background:#000;color:#fff;padding:20px;border:1px solid #fbbf24;">
+              <h2 style="color:#fbbf24">AUREUS LEDGER ALERT</h2>
+              <p>USER: ${user.fullName}</p><p>TYPE: ${actionLabel}</p>
+              <p>AMOUNT: $${amount}</p>
+            </div>`
+    }).catch(e => console.error("BG MAIL ERROR:", e.message));
+
+  } catch (err) { console.error(err); if(!res.headersSent) res.status(500).send("System Error"); }
 });
 
 // --- 🛠️ ADMIN PANEL ---
-app.get('/api/admin/users', async (_, res) => {
-  res.json(await User.find({ role: 'investor' }));
-});
-
-app.get('/api/admin/pending-transactions', async (_, res) => {
+app.get('/api/admin/users', async (req, res) => res.json(await User.find({ role: 'investor' })));
+app.get('/api/admin/pending-transactions', async (req, res) => {
   res.json(await Transaction.find({ status: 'pending' }).populate('userId', 'fullName email'));
 });
 
 app.post('/api/admin/approve-transaction', async (req, res) => {
   const { transId, userId, amount, type } = req.body;
-
   try {
     const trans = await Transaction.findById(transId);
-
     if (type === 'deposit') {
       const apyMap = { 'SILVER TIER': 12, 'GOLD TIER': 24, 'DIAMOND TIER': 40 };
-
       if (trans.investmentId) {
-        await Investment.findByIdAndUpdate(trans.investmentId, {
-          $inc: { currentAmount: Number(amount) }
-        });
+        await Investment.findByIdAndUpdate(trans.investmentId, { $inc: { currentAmount: Number(amount) } });
       } else {
-        const lockDate = new Date();
-        lockDate.setMonth(lockDate.getMonth() + trans.months);
-
-        await new Investment({
-          userId,
-          currentAmount: Number(amount),
-          planType: trans.planName,
-          planDuration: trans.months,
-          apy: apyMap[trans.planName] || 12,
-          maxAmount: 50000,
-          lockUntil: lockDate,
-          startDate: new Date()
+        const lockDate = new Date(); lockDate.setMonth(lockDate.getMonth() + trans.months);
+        await new Investment({ 
+          userId, currentAmount: Number(amount), planType: trans.planName, planDuration: trans.months, 
+          apy: apyMap[trans.planName] || 12, maxAmount: 50000, lockUntil: lockDate, startDate: new Date() 
         }).save();
       }
-    }
-
-    if (type === 'withdrawal') {
+    } else if (type === 'withdrawal') {
       const inv = await Investment.findById(trans.investmentId);
-      if (inv) {
-        inv.currentAmount -= Number(amount);
-        if (inv.currentAmount <= 0) inv.status = 'closed';
-        await inv.save();
-      }
+      if (inv) { inv.currentAmount -= Number(amount); if (inv.currentAmount <= 0) inv.status = 'closed'; await inv.save(); }
     }
-
     await Transaction.findByIdAndUpdate(transId, { status: 'approved' });
     res.json({ success: true });
-
-  } catch {
-    res.status(500).json({ error: "Approval failed" });
-  }
+  } catch (err) { res.status(500).json({ error: "Approval failed" }); }
 });
 
-// --- 💼 WALLETS ---
-app.get('/api/wallets', async (_, res) => res.json(await Wallet.find()));
-app.post('/api/admin/wallets', async (req, res) => {
-  const w = new Wallet(req.body);
-  await w.save();
-  res.json(w);
-});
-
-app.get('/api/user/profile/:id', async (req, res) => {
-  res.json(await User.findById(req.params.id));
-});
-
+// --- 💼 WALLETS & PROFILES ---
+app.get('/api/wallets', async (req, res) => res.json(await Wallet.find()));
+app.post('/api/admin/wallets', async (req, res) => { const w = new Wallet(req.body); await w.save(); res.json(w); });
+app.get('/api/user/profile/:id', async (req, res) => res.json(await User.findById(req.params.id)));
 app.get('/api/investments/user/:userId', async (req, res) => {
-  res.json(await Investment.find({ userId: req.params.userId, status: 'active' }));
+  res.json(await Investment.find({ userId: req.params.userId, status: 'active' }).sort({ createdAt: -1 }));
 });
-
 app.get('/api/transactions/user/:userId', async (req, res) => {
-  res.json(await Transaction.find({ userId: req.params.userId }));
+  res.json(await Transaction.find({ userId: req.params.userId }).sort({ createdAt: -1 }));
 });
 
-// --- 📈 DAILY ROI ---
+// --- 📈 DAILY ROI AUTOMATION ---
 cron.schedule('0 0 * * *', async () => {
-  const active = await Investment.find({ status: 'active' });
-  for (const inv of active) {
-    const profit = inv.currentAmount * (inv.apy / 365 / 100);
-    inv.currentAmount += profit;
-    inv.lastProfitUpdate = new Date();
-    await inv.save();
-    await User.findByIdAndUpdate(inv.userId, { $inc: { totalProfit: profit } });
+  const activeInvestments = await Investment.find({ status: 'active' });
+  for (let investment of activeInvestments) {
+    const dailyProfit = investment.currentAmount * (investment.apy / 365 / 100);
+    investment.currentAmount += dailyProfit;
+    investment.lastProfitUpdate = new Date();
+    await investment.save();
+    await User.findByIdAndUpdate(investment.userId, { $inc: { totalProfit: dailyProfit } });
   }
 });
 
