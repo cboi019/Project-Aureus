@@ -23,6 +23,7 @@ function AnimatedRoutes() {
         <Route path="/register" element={<PageTransition><Register /></PageTransition>} />
         <Route path="/dashboard" element={<PageTransition><Dashboard /></PageTransition>} />
         <Route path="/admin" element={<PageTransition><AdminPanel /></PageTransition>} />
+        <Route path="/about-protocol" element={<PageTransition><AboutDetail /></PageTransition>} />
       </Routes>
     </AnimatePresence>
   );

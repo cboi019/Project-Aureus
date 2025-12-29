@@ -1,4 +1,5 @@
 // 1. Adjusted dotenv for production flexibility
+// server.js
 require('dotenv').config(); 
 const express = require('express');
 const mongoose = require('mongoose');
