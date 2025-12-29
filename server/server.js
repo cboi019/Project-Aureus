@@ -21,17 +21,24 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 .catch(err => console.error('❌ DATABASE ERROR:', err.message));
 
 // --- 📧 MAIL ENGINE (PORT 587 CLOUD FIX) ---
+// --- 📧 MAIL ENGINE (THE GMAIL-SERVICE BYPASS) ---
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // REQUIRED for Port 587
+  service: 'gmail', // This tells Nodemailer to handle the host/port/handshake automatically
   auth: { 
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS 
   },
   tls: {
-    rejectUnauthorized: false, // Bypasses Render's internal proxy certificate issues
-    minVersion: "TLSv1.2"
+    rejectUnauthorized: false
+  }
+});
+
+// STARTUP DIAGNOSTIC
+transporter.verify((error, success) => {
+  if (error) {
+    console.log("❌ MAIL OFFLINE:", error.message);
+  } else {
+    console.log("✅ MAIL ONLINE: Protocol Ledger Alerts Active.");
   }
 });
 
