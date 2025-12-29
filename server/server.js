@@ -20,24 +20,32 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'aureus_capital' })
 .then(() => console.log('>>> 🚀 SYSTEM ONLINE'))
 .catch(err => console.error('❌ DATABASE ERROR:', err.message));
 
-// --- 📧 MAIL ENGINE (CLOUD-OPTIMIZED) ---
+// --- 📧 MAIL ENGINE (FIXES CONNECTION TIMEOUT) ---
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false, // Must be false for Port 587
+  secure: false, // Required for 587
   auth: { 
     user: process.env.EMAIL_USER, 
     pass: process.env.EMAIL_PASS 
   },
   tls: {
-    // This prevents the connection from hanging if the certificate 
-    // handshake is slightly delayed by Render's proxy
+    // This is critical for Render; it prevents the SSL handshake from 
+    // hanging due to internal proxy delays
     rejectUnauthorized: false,
     minVersion: "TLSv1.2"
   },
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  socketTimeout: 10000
+  connectionTimeout: 15000, // Kill the attempt if no answer in 15 seconds
+  socketTimeout: 15000
+});
+
+// THIS WILL PRINT THE TRUTH IN YOUR LOGS ON STARTUP
+transporter.verify((error, success) => {
+  if (error) {
+    console.log("❌ MAIL OFFLINE:", error.message);
+  } else {
+    console.log("✅ MAIL ONLINE: Protocol Ledger Alerts Active.");
+  }
 });
 
 // --- 🏗️ SCHEMAS ---
