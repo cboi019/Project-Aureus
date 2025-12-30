@@ -8,17 +8,33 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("aureus_user"));
-    if (!storedUser) return navigate("/login");
+  // 1. Get user from storage inside the component logic
+  const storedUser = JSON.parse(localStorage.getItem("aureus_user"));
 
-    fetch(`${API_BASE_URL}/api/transactions/user/${storedUser._id}`)
-      .then(res => res.json())
-      .then(data => {
-        setTransactions(data || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+  const loadData = async () => {
+    if (!storedUser?._id) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/transactions/user/${storedUser._id}`);
+      const data = await res.json();
+      // Ensure we are setting an array and sorting by newest first (createdAt)
+      if (Array.isArray(data)) {
+        const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setTransactions(sorted);
+      }
+    } catch (err) {
+      console.error("LEDGER SYNC ERROR:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!storedUser) return navigate("/login");
+    loadData();
+    
+    // Optional: Refresh every 30 seconds while the page is open
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
   }, [navigate]);
 
   return (
@@ -29,25 +45,22 @@ export default function Transactions() {
             <h1 className="text-sm md:text-xl font-black uppercase tracking-[0.3em]">
               Transaction <span className="text-amber-500">Ledger</span>
             </h1>
-            <button 
-              onClick={() => navigate('/dashboard')} 
-              className="text-[10px] font-black text-zinc-500 uppercase hover:text-white transition-colors border border-zinc-800 px-6 py-2"
-            >
-              Back to Dashboard
-            </button>
+            <div className="flex gap-4">
+               <button onClick={loadData} className="text-[10px] font-black text-amber-500 uppercase border border-amber-500/20 px-4 py-2 hover:bg-amber-500 hover:text-black transition-all">Manual Sync</button>
+               <button onClick={() => navigate('/dashboard')} className="text-[10px] font-black text-zinc-500 uppercase hover:text-white transition-colors border border-zinc-800 px-6 py-2">Back</button>
+            </div>
           </div>
 
           <div className="space-y-3">
             {loading ? (
-              <p className="text-center text-[10px] text-zinc-600 animate-pulse uppercase py-20 tracking-[0.5em]">Syncing with Mainframe...</p>
+              <p className="text-center text-[10px] text-zinc-600 animate-pulse uppercase py-20 tracking-[0.5em]">Establishing Secure Connection...</p>
             ) : transactions.length > 0 ? (
-              // Reversing to show latest first
-              [...transactions].reverse().map((tx) => (
+              transactions.map((tx) => (
                 <TransactionRow key={tx._id} transaction={tx} />
               ))
             ) : (
-              <div className="border border-zinc-900 p-20 text-center">
-                <p className="text-[10px] text-zinc-700 uppercase tracking-widest font-black">No transaction history detected</p>
+              <div className="border border-zinc-900 p-20 text-center bg-zinc-950/30">
+                <p className="text-[10px] text-zinc-700 uppercase tracking-widest font-black italic">No records found in database for ID: {storedUser?._id?.slice(-8)}</p>
               </div>
             )}
           </div>
@@ -57,6 +70,7 @@ export default function Transactions() {
   );
 }
 
+// Keep the Row exactly as you like it
 function TransactionRow({ transaction }) {
   const statusColors = {
     pending: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
@@ -78,16 +92,14 @@ function TransactionRow({ transaction }) {
         <div className="h-8 w-[1px] bg-zinc-800 hidden sm:block"></div>
         <div>
           <p className={`text-[11px] font-black uppercase ${transaction.type === 'deposit' ? 'text-emerald-500' : 'text-red-500'}`}>
-            {transaction.type === 'deposit' ? '+' : '-'}${Number(transaction.amount).toLocaleString()}
+            {transaction.type === 'deposit' ? '+' : '-'}${Number(transaction.amount || 0).toLocaleString()}
           </p>
-          <p className="text-[8px] text-zinc-600 uppercase font-black tracking-widest">{transaction.type} Protocol</p>
+          <p className="text-[8px] text-zinc-600 uppercase font-black tracking-widest">{transaction.type}</p>
         </div>
       </div>
-      <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-         <span className={`text-[8px] px-4 py-1.5 font-black uppercase border ${statusColors[transaction.status]}`}>
-            {transaction.status}
-         </span>
-      </div>
+      <span className={`text-[8px] px-4 py-1.5 font-black uppercase border ${statusColors[transaction.status] || 'text-zinc-500 border-zinc-800'}`}>
+        {transaction.status}
+      </span>
     </div>
   );
 }
