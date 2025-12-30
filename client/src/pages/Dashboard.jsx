@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import PageTransition from "../components/PageTransition";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from '../utils/api';
 
 const PLANS = [
   { name: "SILVER TIER", apy: 12 },
@@ -57,7 +58,7 @@ export default function Dashboard() {
     refreshInvestments(storedUser._id);
     refreshTransactions(storedUser._id);
 
-    fetch("http://localhost:5000/api/wallets")
+    fetch(`${API_BASE_URL}/api/wallets`)
       .then(res => res.json())
       .then(data => setWalletOptions(data || []))
       .catch(() => console.error("Wallet fetch failed"));
@@ -65,21 +66,21 @@ export default function Dashboard() {
 
   const fetchUserData = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/user/profile/${id}`);
+      const res = await fetch(`${API_BASE_URL}/api/user/profile/${id}`);
       const data = await res.json();
       setUser(data);
     } catch (err) { console.error("User update failed"); }
   };
 
   const refreshInvestments = (userId) => {
-    fetch(`http://localhost:5000/api/investments/user/${userId}`)
+    fetch(`${API_BASE_URL}/api/investments/user/${userId}`)
       .then(res => res.json())
       .then(data => setInvestments(data || []))
       .catch(() => console.error("Investment fetch failed"));
   };
 
   const refreshTransactions = (userId) => {
-    fetch(`http://localhost:5000/api/transactions/user/${userId}`)
+    fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
       .then(res => res.json())
       .then(data => setTransactions(data || []))
       .catch(() => console.error("Transaction fetch failed"));
@@ -131,7 +132,7 @@ export default function Dashboard() {
 
     const loading = toast.loading("BROADCASTING TO LEDGER...");
     try {
-      const res = await fetch("http://localhost:5000/api/transactions/request", {
+      const res = await fetch(`${API_BASE_URL}/api/transactions/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -167,7 +168,7 @@ export default function Dashboard() {
 
     const loading = toast.loading("EXECUTING WITHDRAWAL...");
     try {
-      const res = await fetch("http://localhost:5000/api/transactions/request", {
+      const res = await fetch(`${API_BASE_URL}/api/transactions/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -197,7 +198,6 @@ export default function Dashboard() {
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <h1 onClick={() => navigate('/')} className="text-sm md:text-xl font-bold tracking-[0.3em] uppercase cursor-pointer">AUREUS <span className="text-amber-500">CAPITAL</span></h1>
             <div className="flex items-center gap-3 relative">
-              {/* USER NAME - NOW VISIBLE ON ALL SCREENS */}
               <div className="text-right">
                 <p className="text-[7px] text-zinc-600 uppercase font-bold hidden md:block">Authorized Node</p>
                 <p className="text-[9px] md:text-[10px] font-black text-amber-500 uppercase truncate max-w-[100px] sm:max-w-[150px] md:max-w-none">{user.fullName}</p>
@@ -211,7 +211,6 @@ export default function Dashboard() {
                     exit={{ opacity: 0, y: 10 }} 
                     className="absolute right-0 top-12 w-64 bg-zinc-900 border border-zinc-800 shadow-2xl z-[100]"
                   >
-                    {/* LOGGED IN AS EMAIL - THIS WAS MISSING */}
                     <div className="p-4 border-b border-zinc-800 bg-zinc-950">
                       <p className="text-[7px] text-zinc-600 uppercase font-bold tracking-wider mb-1">Logged in as</p>
                       <p className="text-[10px] text-amber-500 font-mono break-all">{user.email}</p>
@@ -317,7 +316,6 @@ export default function Dashboard() {
                         {walletOptions.map(w => <option key={w._id} value={w.address}>{w.name}</option>)}
                       </select>
 
-                      {/* SELECTED WALLET ADDRESS DISPLAY WITH COPY */}
                       {selectedWallet && (
                         <div className="bg-zinc-950 border border-amber-500/30 p-4 space-y-2">
                           <p className="text-[7px] text-amber-500 uppercase font-black tracking-widest">DESTINATION WALLET ADDRESS</p>
