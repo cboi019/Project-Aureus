@@ -204,7 +204,6 @@ export default function Dashboard() {
                       {user.role === 'admin' && (
                         <button onClick={() => navigate('/admin')} className="w-full text-[9px] font-black text-amber-500 border border-amber-500/40 px-3 py-3 hover:bg-amber-500 hover:text-black transition-all">ADMIN TERMINAL</button>
                       )}
-                      <button onClick={() => navigate('/transactions')} className="w-full text-[9px] font-black text-zinc-400 border border-zinc-800 px-3 py-3 hover:bg-zinc-800 transition-all">VIEW LEDGER</button>
                       <button onClick={() => { localStorage.removeItem("aureus_user"); navigate("/login"); }} className="w-full bg-red-500/10 text-red-500 py-3 text-[9px] font-black uppercase hover:bg-red-500 hover:text-white transition-all">TERMINATE SESSION</button>
                     </div>
                   </motion.div>
@@ -224,7 +223,6 @@ export default function Dashboard() {
             <div className="flex gap-6 border-b border-zinc-900 text-[10px] font-black uppercase mb-8">
               <button onClick={() => {setActiveTab("overview"); setActiveStructId(null); setSelectedTxForWithdraw(null);}} className={`pb-4 ${activeTab === "overview" ? "text-amber-500 border-b border-amber-500" : "text-zinc-600"}`}>Summary</button>
               <button onClick={() => {setActiveTab("deposit"); setActiveStructId(null); setSelectedTxForWithdraw(null);}} className={`pb-4 ${activeTab === "deposit" ? "text-amber-500 border-b border-amber-500" : "text-zinc-600"}`}>New Protocol</button>
-              <button onClick={() => navigate('/transactions')} className="pb-4 text-zinc-600 hover:text-white">Ledger</button>
             </div>
 
             <AnimatePresence mode="wait">
