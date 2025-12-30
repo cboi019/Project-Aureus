@@ -29,7 +29,6 @@ export default function Dashboard() {
   const [amount, setAmount] = useState("");
   const [walletOptions, setWalletOptions] = useState([]);
   const [investments, setInvestments] = useState([]);
-  const [transactions, setTransactions] = useState([]);
   
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectedMonths, setSelectedMonths] = useState(3);
@@ -56,7 +55,6 @@ export default function Dashboard() {
     if (!storedUser) return navigate("/login");
     fetchUserData(storedUser._id);
     refreshInvestments(storedUser._id);
-    refreshTransactions(storedUser._id);
 
     fetch(`${API_BASE_URL}/api/wallets`)
       .then(res => res.json())
@@ -77,13 +75,6 @@ export default function Dashboard() {
       .then(res => res.json())
       .then(data => setInvestments(data || []))
       .catch(() => console.error("Investment fetch failed"));
-  };
-
-  const refreshTransactions = (userId) => {
-    fetch(`${API_BASE_URL}/api/transactions/user/${userId}`)
-      .then(res => res.json())
-      .then(data => setTransactions(data || []))
-      .catch(() => console.error("Transaction fetch failed"));
   };
 
   const getLockCountdown = (lockUntil) => {
@@ -152,20 +143,17 @@ export default function Dashboard() {
         setSelectedPlan(null);
         setActiveStructId(null);
         refreshInvestments(user._id);
-        refreshTransactions(user._id);
       }
     } catch (err) { toast.error("TRANSMISSION ERROR", { id: loading }); }
   };
 
   const handleWithdrawExecute = async (e) => {
     e.preventDefault();
-
     const countdown = getLockCountdown(selectedTxForWithdraw?.lockUntil);
     if (countdown) {
         toast.error("RETRIEVAL BLOCKED: TIME REMAINING");
         return; 
     }
-
     const loading = toast.loading("EXECUTING WITHDRAWAL...");
     try {
       const res = await fetch(`${API_BASE_URL}/api/transactions/request`, {
@@ -183,7 +171,6 @@ export default function Dashboard() {
         toast.success("RETRIEVAL QUEUED", { id: loading });
         setSelectedTxForWithdraw(null);
         refreshInvestments(user._id);
-        refreshTransactions(user._id);
         setActiveTab("overview");
       }
     } catch (err) { toast.error("ERROR", { id: loading }); }
@@ -206,20 +193,18 @@ export default function Dashboard() {
               <AnimatePresence>
                 {showLogoutMenu && (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    exit={{ opacity: 0, y: 10 }} 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} 
                     className="absolute right-0 top-12 w-64 bg-zinc-900 border border-zinc-800 shadow-2xl z-[100]"
                   >
                     <div className="p-4 border-b border-zinc-800 bg-zinc-950">
                       <p className="text-[7px] text-zinc-600 uppercase font-bold tracking-wider mb-1">Logged in as</p>
                       <p className="text-[10px] text-amber-500 font-mono break-all">{user.email}</p>
                     </div>
-                    
                     <div className="p-4 space-y-2">
                       {user.role === 'admin' && (
                         <button onClick={() => navigate('/admin')} className="w-full text-[9px] font-black text-amber-500 border border-amber-500/40 px-3 py-3 hover:bg-amber-500 hover:text-black transition-all">ADMIN TERMINAL</button>
                       )}
+                      <button onClick={() => navigate('/transactions')} className="w-full text-[9px] font-black text-zinc-400 border border-zinc-800 px-3 py-3 hover:bg-zinc-800 transition-all">VIEW LEDGER</button>
                       <button onClick={() => { localStorage.removeItem("aureus_user"); navigate("/login"); }} className="w-full bg-red-500/10 text-red-500 py-3 text-[9px] font-black uppercase hover:bg-red-500 hover:text-white transition-all">TERMINATE SESSION</button>
                     </div>
                   </motion.div>
@@ -239,13 +224,17 @@ export default function Dashboard() {
             <div className="flex gap-6 border-b border-zinc-900 text-[10px] font-black uppercase mb-8">
               <button onClick={() => {setActiveTab("overview"); setActiveStructId(null); setSelectedTxForWithdraw(null);}} className={`pb-4 ${activeTab === "overview" ? "text-amber-500 border-b border-amber-500" : "text-zinc-600"}`}>Summary</button>
               <button onClick={() => {setActiveTab("deposit"); setActiveStructId(null); setSelectedTxForWithdraw(null);}} className={`pb-4 ${activeTab === "deposit" ? "text-amber-500 border-b border-amber-500" : "text-zinc-600"}`}>New Protocol</button>
+              <button onClick={() => navigate('/transactions')} className="pb-4 text-zinc-600 hover:text-white">Ledger</button>
             </div>
 
             <AnimatePresence mode="wait">
               {activeTab === "overview" && (
                 <motion.div key="summary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
                   <div>
-                    <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-6">Active Investments</h3>
+                    <div className="flex justify-between items-end mb-6">
+                      <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Active Investments</h3>
+                      <button onClick={() => navigate('/transactions')} className="text-[9px] font-black text-zinc-600 hover:text-amber-500 uppercase border-b border-zinc-900">Full History →</button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {investments.length > 0 ? (
                         investments.map((inv) => (
@@ -255,21 +244,6 @@ export default function Dashboard() {
                         <div className="col-span-full border-2 border-dashed border-zinc-900 p-16 flex flex-col items-center justify-center text-center">
                           <p className="text-[12px] text-zinc-500 font-black uppercase mb-6">No active smart-contracts detected</p>
                           <button onClick={() => setActiveTab("deposit")} className="text-[10px] font-black text-amber-500 border border-amber-500/30 px-10 py-4 hover:bg-amber-500 hover:text-black">INITIALIZE NEW PLAN</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-6">Transaction History</h3>
-                    <div className="space-y-2">
-                      {transactions.length > 0 ? (
-                        transactions.map((tx) => (
-                          <TransactionRow key={tx._id} transaction={tx} />
-                        ))
-                      ) : (
-                        <div className="border border-zinc-900 p-10 text-center">
-                          <p className="text-[10px] text-zinc-700 uppercase">No transaction history</p>
                         </div>
                       )}
                     </div>
@@ -321,16 +295,9 @@ export default function Dashboard() {
                           <p className="text-[7px] text-amber-500 uppercase font-black tracking-widest">DESTINATION WALLET ADDRESS</p>
                           <div className="flex items-center gap-2">
                             <p className="text-[11px] text-white font-mono break-all flex-1">{selectedWallet}</p>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(selectedWallet);
-                                toast.success("ADDRESS COPIED", { duration: 2000 });
-                              }}
+                            <button type="button" onClick={() => { navigator.clipboard.writeText(selectedWallet); toast.success("ADDRESS COPIED"); }}
                               className="shrink-0 bg-amber-500 text-black px-4 py-2 text-[8px] font-black uppercase hover:bg-white transition-all"
-                            >
-                              COPY
-                            </button>
+                            >COPY</button>
                           </div>
                           <p className="text-[8px] text-zinc-600 uppercase italic">Send exact amount to this address externally</p>
                         </div>
@@ -354,7 +321,6 @@ export default function Dashboard() {
                       <div className="text-center">
                         <p className="text-[9px] text-zinc-600 uppercase font-black mb-2">Authorized Struct Liquidity</p>
                         <p className="text-4xl font-mono font-bold text-white">${Number(selectedTxForWithdraw.currentAmount).toLocaleString()}</p>
-                        
                         {getLockCountdown(selectedTxForWithdraw.lockUntil) && (
                            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/50 text-red-500">
                              <p className="text-[9px] font-black uppercase tracking-tighter">⚠️ PROTOCOL LOCKED: IMMATURE ASSET</p>
@@ -362,20 +328,12 @@ export default function Dashboard() {
                            </div>
                         )}
                       </div>
-
                       <form onSubmit={handleWithdrawExecute} className="space-y-4">
-                        <input 
-                          type="text" 
-                          value={withdrawalAddress} 
-                          onChange={(e) => setWithdrawalAddress(e.target.value)} 
+                        <input type="text" value={withdrawalAddress} onChange={(e) => setWithdrawalAddress(e.target.value)} 
                           className="w-full bg-black border border-zinc-800 p-6 text-[10px] font-mono outline-none focus:border-amber-500 text-amber-500 disabled:opacity-30" 
-                          placeholder="DESTINATION WALLET ADDRESS" 
-                          disabled={!!getLockCountdown(selectedTxForWithdraw.lockUntil)}
-                          required 
+                          placeholder="DESTINATION WALLET ADDRESS" disabled={!!getLockCountdown(selectedTxForWithdraw.lockUntil)} required 
                         />
-                        <button 
-                          type="submit" 
-                          disabled={!!getLockCountdown(selectedTxForWithdraw.lockUntil)}
+                        <button type="submit" disabled={!!getLockCountdown(selectedTxForWithdraw.lockUntil)}
                           className="w-full bg-white text-black py-6 text-[11px] font-black uppercase hover:bg-amber-500 disabled:bg-zinc-800 disabled:text-zinc-600 transition-all"
                         >
                           {getLockCountdown(selectedTxForWithdraw.lockUntil) ? "Protocol Locked" : "Execute Retrieval Protocol"}
@@ -439,39 +397,6 @@ function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function TransactionRow({ transaction }) {
-  const statusColors = {
-    pending: 'text-amber-500 bg-amber-500/10',
-    approved: 'text-emerald-500 bg-emerald-500/10',
-    denied: 'text-red-500 bg-red-500/10'
-  };
-
-  const date = new Date(transaction.createdAt);
-  const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-  return (
-    <div className="bg-zinc-900/40 border border-zinc-800 p-4 flex justify-between items-center hover:border-zinc-700 transition-colors">
-      <div className="flex items-center gap-6">
-        <div>
-          <p className="text-[10px] text-zinc-500 font-mono">{formattedDate}</p>
-          <p className="text-[9px] text-zinc-600 font-mono">{formattedTime}</p>
-        </div>
-        <div className="h-8 w-[1px] bg-zinc-800"></div>
-        <div>
-          <p className={`text-[9px] font-black uppercase ${transaction.type === 'deposit' ? 'text-emerald-500' : 'text-red-500'}`}>
-            {transaction.type === 'deposit' ? '+' : '-'}${Number(transaction.amount).toLocaleString()}
-          </p>
-          <p className="text-[8px] text-zinc-600 uppercase">{transaction.type}</p>
-        </div>
-      </div>
-      <span className={`text-[8px] px-3 py-1 font-black uppercase ${statusColors[transaction.status]}`}>
-        {transaction.status}
-      </span>
     </div>
   );
 }
