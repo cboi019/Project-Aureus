@@ -10,10 +10,17 @@ const FAQ_DATA = [
 
 export default function Contact() {
   const [openFaq, setOpenFaq] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText('emmariottt@gmail.com');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000); // Reset message after 3 seconds
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-amber-500 selection:text-black">
-      {/* Updated Navbar with Back to Homepage */}
+      {/* Navigation */}
       <nav className="flex justify-between items-center px-6 md:px-12 py-8 border-b border-zinc-900/50 backdrop-blur-md sticky top-0 z-50">
         <Link to="/" className="flex flex-col">
           <span className="text-lg font-bold tracking-[0.5em] uppercase">AUREUS</span>
@@ -44,9 +51,26 @@ export default function Contact() {
               <p className="text-zinc-500 text-[11px] uppercase tracking-wider leading-loose mb-6">
                 For institutional inquiries or technical support, contact the transmission desk:
               </p>
-              <a href="mailto:emmariottt@gmail.com" className="text-xl font-mono text-white hover:text-amber-500 transition-colors">
-                emmariottt@gmail.com
-              </a>
+              
+              <div className="space-y-4">
+                {/* Clickable Email Link */}
+                <a href="mailto:emmariottt@gmail.com" className="block text-xl font-mono text-white hover:text-amber-500 transition-colors">
+                  emmariottt@gmail.com
+                </a>
+
+                {/* Manual Copy Button */}
+                <button 
+                  onClick={handleCopy}
+                  className="text-[9px] text-zinc-600 hover:text-amber-500 uppercase tracking-[0.2em] font-black transition-all flex items-center gap-2"
+                >
+                  {copied ? (
+                    <span className="text-emerald-500 animate-pulse">[ Address Copied to Clipboard ]</span>
+                  ) : (
+                    <span>[ Copy Transmission Address ]</span>
+                  )}
+                </button>
+              </div>
+
               <div className="mt-12 p-4 border border-zinc-900 bg-[#080808]">
                 <p className="text-[8px] text-zinc-600 uppercase tracking-widest leading-relaxed">
                   Average Response Latency: &lt; 120 Minutes<br/>
