@@ -260,7 +260,7 @@ export default function Dashboard() {
                             <h4 className="text-white group-hover:text-amber-500 font-black text-lg uppercase">{plan.name}</h4>
                             <p className="text-[10px] text-zinc-500 uppercase mt-1">Fixed Yield Index: {plan.apy}% APY</p>
                           </div>
-                          <button onClick={() => setSelectedPlan(plan)} className="bg-white text-black text-[9px] font-black px-8 py-3 uppercase hover:bg-amber-500">Select Node</button>
+                          <button onClick={() => setSelectedPlan(plan)} className="bg-white text-black text-[9px] font-black px-8 py-3 uppercase hover:bg-amber-500">Select Plan</button>
                         </div>
                       ))}
                     </div>
