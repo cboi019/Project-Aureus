@@ -11,6 +11,7 @@ import { Toaster } from 'react-hot-toast';
 import PageTransition from './components/PageTransition';
 import AboutDetail from './pages/AboutDetail';
 import Transactions from './pages/Transactions';
+import Contact from './pages/Contact';
 
 // This sub-component handles the animation logic
 function AnimatedRoutes() {
@@ -26,6 +27,7 @@ function AnimatedRoutes() {
         <Route path="/admin" element={<PageTransition><AdminPanel /></PageTransition>} />
         <Route path="/about-protocol" element={<PageTransition><AboutDetail /></PageTransition>} />
         <Route path="/transactions" element={<PageTransition><Transactions /></PageTransition>} />
+        <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />
       </Routes>
     </AnimatePresence>
   );

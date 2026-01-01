@@ -127,6 +127,7 @@ export default function Home() {
           <span className="text-[7px] text-amber-500 tracking-[0.4em] uppercase font-black">Capital Management</span>
         </div>
         <div className="flex items-center gap-6">
+          <Link to="/contact" className="text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest cursor-pointer">Contact Us</Link>
           <a href="#about" onClick={scrollToAbout} className="text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest cursor-pointer">About</a>
           <Link to="/login" className="text-[9px] border border-zinc-800 px-6 py-2 uppercase font-black hover:bg-white hover:text-black transition-all">Client Login</Link>
         </div>
