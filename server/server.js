@@ -103,6 +103,16 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // --- 💸 USER TRANSACTIONS ---
+app.get('/api/transactions/user/:userId', async (req, res) => {
+  try {
+    const transactions = await Transaction.find({ userId: req.params.userId }).sort({ createdAt: -1 });
+    res.json(transactions);
+  } catch (err) {
+    logger.error('Failed to fetch user transactions', err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.post('/api/transactions/request', async (req, res) => {
   const { userId, amount, type, planName, targetWallet, userWallet, months, parentStructId } = req.body;
   try {
