@@ -232,7 +232,7 @@ export default function Dashboard() {
                   <div>
                     <div className="flex justify-between items-end mb-6">
                       <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Active Investments</h3>
-                      <button onClick={() => navigate('/transactions')} className="text-[9px] font-black text-zinc-600 hover:text-amber-500 uppercase border-b border-zinc-900">Transaction sHistory →</button>
+                      <button onClick={() => navigate('/transactions')} className="text-[9px] font-black text-zinc-600 hover:text-amber-500 uppercase border-b border-zinc-900">Transaction History →</button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {investments.length > 0 ? (
