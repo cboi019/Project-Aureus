@@ -15,23 +15,25 @@ export default function Contact() {
   const handleCopy = () => {
     navigator.clipboard.writeText('emmariottt@gmail.com');
     setCopied(true);
-    setTimeout(() => setCopied(false), 3000); // Reset message after 3 seconds
+    setTimeout(() => setCopied(false), 3000);
   };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-amber-500 selection:text-black">
-      {/* Navigation */}
-      <nav className="flex justify-between items-center px-6 md:px-12 py-8 border-b border-zinc-900/50 backdrop-blur-md sticky top-0 z-50">
-        <Link to="/" className="flex flex-col">
-          <span className="text-lg font-bold tracking-[0.5em] uppercase">AUREUS</span>
-          <span className="text-[7px] text-amber-500 tracking-[0.4em] uppercase font-black">Capital Management</span>
+      {/* Navigation - Streamlined for small screens */}
+      <nav className="flex justify-between items-center px-4 md:px-12 py-6 md:py-8 border-b border-zinc-900/50 backdrop-blur-md sticky top-0 z-50">
+        <Link to="/" className="flex flex-col shrink-0">
+          <span className="text-sm md:text-lg font-bold tracking-[0.3em] md:tracking-[0.5em] uppercase">AUREUS</span>
+          <span className="hidden md:block text-[7px] text-amber-500 tracking-[0.4em] uppercase font-black">Capital Management</span>
+          <span className="md:hidden text-[5px] text-amber-500 tracking-[0.2em] uppercase font-black">Capital</span>
         </Link>
         
-        <div className="flex items-center gap-6">
-          <Link to="/" className="text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest cursor-pointer">
+        <div className="flex items-center gap-4 md:gap-6">
+          {/* Desktop Only Back Link */}
+          <Link to="/" className="hidden md:block text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest cursor-pointer">
             ← Back to Terminal
           </Link>
-          <Link to="/login" className="text-[9px] border border-zinc-800 px-6 py-2 uppercase font-black hover:bg-white hover:text-black transition-all">
+          <Link to="/login" className="text-[8px] md:text-[9px] border border-zinc-800 px-4 md:px-6 py-2 uppercase font-black hover:bg-white hover:text-black transition-all">
             Client Login
           </Link>
         </div>
@@ -53,18 +55,16 @@ export default function Contact() {
               </p>
               
               <div className="space-y-4">
-                {/* Clickable Email Link */}
-                <a href="mailto:emmariottt@gmail.com" className="block text-xl font-mono text-white hover:text-amber-500 transition-colors">
+                <a href="mailto:emmariottt@gmail.com" className="block text-xl font-mono text-white hover:text-amber-500 transition-colors break-all md:break-normal">
                   emmariottt@gmail.com
                 </a>
 
-                {/* Manual Copy Button */}
                 <button 
                   onClick={handleCopy}
                   className="text-[9px] text-zinc-600 hover:text-amber-500 uppercase tracking-[0.2em] font-black transition-all flex items-center gap-2"
                 >
                   {copied ? (
-                    <span className="text-emerald-500 animate-pulse">[ Address Copied to Clipboard ]</span>
+                    <span className="text-emerald-500 animate-pulse">[ Address Copied ]</span>
                   ) : (
                     <span>[ Copy Transmission Address ]</span>
                   )}
@@ -89,7 +89,7 @@ export default function Contact() {
                       className="w-full flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-left hover:text-amber-500 transition-colors group"
                     >
                       <span className={openFaq === i ? 'text-amber-500' : 'text-zinc-400 group-hover:text-white'}>{faq.q}</span>
-                      <span className="text-zinc-600">{openFaq === i ? '−' : '+'}</span>
+                      <span className="text-zinc-600 ml-2">{openFaq === i ? '−' : '+'}</span>
                     </button>
                     {openFaq === i && (
                       <motion.p 
@@ -104,6 +104,13 @@ export default function Contact() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Mobile Only Back Link - Neatly positioned at the bottom */}
+          <div className="md:hidden mt-12 flex justify-center border-t border-zinc-900 pt-12">
+             <Link to="/" className="text-[9px] text-zinc-600 hover:text-white uppercase font-black transition-colors tracking-[0.3em] flex items-center gap-2">
+                ← Return to Terminal
+             </Link>
           </div>
         </motion.div>
       </div>
