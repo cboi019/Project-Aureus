@@ -178,22 +178,25 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
   } catch (err) { logger.error('Approve failed', err); res.status(500).send(err); }
 });
 
-// This handles the "Decline" button and clears the 404 error
-app.delete('/api/admin/transactions/:id', async (req, res) => {
+// Changed from .delete to .post so we keep the record for the Ledger
+app.post('/api/admin/deny-transaction', async (req, res) => {
   try {
-    const { id } = req.params;
+    const { transId } = req.body; // Ensure your frontend sends 'transId' in the body
     
-    // Option A: Just delete it (Hard purge)
-    await Transaction.findByIdAndDelete(id);
+    // Instead of deleting, we change the status to 'denied'
+    const updatedTx = await Transaction.findByIdAndUpdate(
+      transId, 
+      { status: 'denied' }, 
+      { new: true }
+    );
     
-    // Option B: Keep record but mark as denied (Better for audits)
-    // await Transaction.findByIdAndUpdate(id, { status: 'denied' });
+    if (!updatedTx) return res.status(404).send("Transaction not found");
 
-    logger.info(`ADMIN ACTION: Transaction ${id} declined/deleted.`);
-    res.json({ success: true, message: "Transaction removed from terminal." });
+    logger.info(`ADMIN ACTION: Transaction ${transId} marked as DENIED.`);
+    res.json({ success: true, message: "Transaction denied and recorded." });
   } catch (err) {
-    logger.error('PURGE ERROR:', err);
-    res.status(500).json({ success: false, error: "Internal Server Error" });
+    logger.error('DENY ERROR:', err);
+    res.status(500).send("Internal Error");
   }
 });
 
