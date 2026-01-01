@@ -12,10 +12,23 @@ const PLANS = [
   { name: "DIAMOND TIER", apy: 40 }
 ];
 
+// --- UPDATED AMOUNT RANGES TO MATCH NEW TIER SPECS ---
 const amountRanges = {
-  3: { min: 500, max: 5000 },
-  6: { min: 1000, max: 10000 },
-  12: { min: 5000, max: 50000 }
+  "SILVER TIER": {
+    3: { min: 100, max: 1000 },
+    6: { min: 300, max: 3000 },
+    12: { min: 500, max: 5000 }
+  },
+  "GOLD TIER": {
+    3: { min: 1000, max: 5000 },
+    6: { min: 2500, max: 10000 },
+    12: { min: 5000, max: 20000 }
+  },
+  "DIAMOND TIER": {
+    3: { min: 10000, max: 50000 },
+    6: { min: 25000, max: 100000 },
+    12: { min: 50000, max: 250000 }
+  }
 };
 
 const TIMEFRAMES = [
@@ -43,7 +56,11 @@ export default function Dashboard() {
   
   const navigate = useNavigate();
 
-  const currentRange = amountRanges[selectedMonths];
+  // Logic to pull the correct range based on Plan AND Duration
+  const currentRange = selectedPlan 
+    ? amountRanges[selectedPlan.name][selectedMonths] 
+    : { min: 0, max: 0 };
+
   const isInvalidAmount = amount && (Number(amount) < currentRange.min || Number(amount) > currentRange.max);
 
   useEffect(() => {
@@ -116,7 +133,7 @@ export default function Dashboard() {
   const handleDepositSubmit = async () => {
     if (!selectedWallet) return toast.error("SELECT A TRANSMISSION NODE");
     const numAmount = Number(amount);
-    const range = amountRanges[selectedMonths];
+    const range = amountRanges[selectedPlan.name][selectedMonths];
     
     if (!activeStructId && (numAmount < range.min || numAmount > range.max)) {
       return toast.error(`PROTOCOL REJECTED: Amount must be between $${range.min} and $${range.max}`);

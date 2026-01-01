@@ -22,7 +22,7 @@ app.use(cors({
 const connectionOptions = {
   dbName: 'aureus_capital',
   maxPoolSize: 10,             // Allows up to 10 simultaneous database pipes
-  minPoolSize: 2,              // Keeps 2 pipes open at all times for speed
+  minPoolSize: 2,               // Keeps 2 pipes open at all times for speed
   socketTimeoutMS: 45000,      // Prevents "hanging" requests from crashing the server
   serverSelectionTimeoutMS: 5000
 };
@@ -226,10 +226,19 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
     if (!trans) return res.status(404).json({ error: "Transaction not found" });
 
     if (type === 'deposit') {
+      // UPDATED PLAN CONFIGURATION
       const apyMap = { 'SILVER TIER': 12, 'GOLD TIER': 24, 'DIAMOND TIER': 40 };
-      const maxAmountMap = { 3: 5000, 6: 10000, 12: 50000 };
+      
+      // Updated Max Amount Mapping based on Tier + Duration
+      const maxAmountMap = {
+        'SILVER TIER': { 3: 1000, 6: 3000, 12: 5000 },
+        'GOLD TIER': { 3: 5000, 6: 10000, 12: 20000 },
+        'DIAMOND TIER': { 3: 50000, 6: 100000, 12: 250000 }
+      };
+
       const apy = apyMap[trans.planName] || 12;
-      const maxAmount = maxAmountMap[trans.months] || 5000;
+      const tierLimits = maxAmountMap[trans.planName] || maxAmountMap['SILVER TIER'];
+      const maxAmount = tierLimits[trans.months] || 5000;
 
       if (trans.investmentId) {
         const investment = await Investment.findById(trans.investmentId);
