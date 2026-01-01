@@ -130,7 +130,7 @@ export default function Home() {
         <div className="flex items-center gap-3 md:gap-6 ml-2">
           <Link to="/contact" className="text-[8px] md:text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-tighter md:tracking-widest cursor-pointer whitespace-nowrap">Contact Us</Link>
           <a href="#about" onClick={scrollToAbout} className="text-[8px] md:text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-tighter md:tracking-widest cursor-pointer whitespace-nowrap">About</a>
-          <Link to="/login" className="text-[8px] md:text-[9px] border border-zinc-800 px-3 md:px-6 py-1.5 md:py-2 uppercase font-black hover:bg-white hover:text-black transition-all whitespace-nowrap">Client Login</Link>
+          <Link to="/login" className="text-[8px] md:text-[9px] border border-zinc-800 px-3 md:px-6 py-1.5 md:py-2 uppercase font-black hover:bg-white hover:text-black transition-all whitespace-nowrap">Login</Link>
         </div>
       </nav>
 
@@ -226,7 +226,7 @@ export default function Home() {
           </div>
           <div className="flex gap-10">
             <Link to="/register" className="text-[9px] text-zinc-500 hover:text-white uppercase tracking-widest font-black transition-colors">Register</Link>
-            <Link to="/login" className="text-[9px] text-zinc-500 hover:text-white uppercase tracking-widest font-black transition-colors">Terminal</Link>
+            <Link to="/login" className="text-[9px] text-zinc-500 hover:text-white uppercase tracking-widest font-black transition-colors">Login</Link>
           </div>
         </div>
       </footer>

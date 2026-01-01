@@ -223,7 +223,7 @@ export default function Dashboard() {
           <div className="pt-6 border-t border-zinc-900">
             <div className="flex gap-6 border-b border-zinc-900 text-[10px] font-black uppercase mb-8">
               <button onClick={() => {setActiveTab("overview"); setActiveStructId(null); setSelectedTxForWithdraw(null);}} className={`pb-4 ${activeTab === "overview" ? "text-amber-500 border-b border-amber-500" : "text-zinc-600"}`}>Summary</button>
-              <button onClick={() => {setActiveTab("deposit"); setActiveStructId(null); setSelectedTxForWithdraw(null);}} className={`pb-4 ${activeTab === "deposit" ? "text-amber-500 border-b border-amber-500" : "text-zinc-600"}`}>New Protocol</button>
+              <button onClick={() => {setActiveTab("deposit"); setActiveStructId(null); setSelectedTxForWithdraw(null);}} className={`pb-4 ${activeTab === "deposit" ? "text-amber-500 border-b border-amber-500" : "text-zinc-600"}`}>New Plan</button>
             </div>
 
             <AnimatePresence mode="wait">

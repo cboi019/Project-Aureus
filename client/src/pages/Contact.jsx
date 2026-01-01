@@ -44,7 +44,7 @@ export default function Contact() {
             ← Back to Terminal
           </button>
           <Link to="/login" className="text-[8px] md:text-[9px] border border-zinc-800 px-4 md:px-6 py-2 uppercase font-black hover:bg-white hover:text-black transition-all">
-            Client Login
+            Login
           </Link>
         </div>
       </nav>
@@ -77,7 +77,7 @@ export default function Contact() {
                   {copied ? (
                     <span className="text-emerald-500 animate-pulse">[ Address Copied ]</span>
                   ) : (
-                    <span>[ Copy Transmission Address ]</span>
+                    <span>[ Copy Email Address]</span>
                   )}
                 </button>
               </div>
@@ -124,7 +124,7 @@ export default function Contact() {
                 onClick={handleReturn}
                 className="text-[10px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-[0.3em] flex items-center gap-2"
              >
-                ← Return to Terminal
+                ← Return to Home Page
              </button>
           </div>
         </motion.div>
