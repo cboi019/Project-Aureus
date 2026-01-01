@@ -5,46 +5,39 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const cron = require('node-cron'); 
-const logger = require('./logger'); // <--- Import our new logger
+const logger = require('./logger');
 
 const app = express();
 app.use(express.json());
 
+// 🛡️ UPDATED CORS: Added common Render patterns to prevent "Failed to Fetch"
 app.use(cors({
   origin: [
     'http://localhost:5173', 
-    'https://aureus-capital.onrender.com'
+    'https://aureus-capital.onrender.com',
+    /\.onrender\.com$/ // This allows any sub-branch of your render domain to connect
   ],
   credentials: true
 }));
 
-// --- 🛡️ DATABASE CONNECTION (WITH POOLING) ---
 const connectionOptions = {
   dbName: 'aureus_capital',
-  maxPoolSize: 10,       // Handles up to 10 concurrent heavy tasks
-  minPoolSize: 2,        // Keeps 2 connections "warm" at all times
-  socketTimeoutMS: 45000,// Close sockets after 45s of inactivity
-  serverSelectionTimeoutMS: 5000 // Stop trying to connect after 5s
+  maxPoolSize: 10,
+  minPoolSize: 2,
+  socketTimeoutMS: 45000,
+  serverSelectionTimeoutMS: 5000
 };
 
 mongoose.connect(process.env.MONGO_URI, connectionOptions)
-.then(() => {
-  logger.info('SYSTEM ONLINE', { 
-    host: mongoose.connection.host, 
-    db: mongoose.connection.name 
-  });
-})
+.then(() => logger.info('SYSTEM ONLINE', { host: mongoose.connection.host, db: mongoose.connection.name }))
 .catch(err => logger.error('DATABASE CONNECTION FAILED', err));
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: { 
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS 
-  }
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
 
-// --- 🏗️ SCHEMAS (KEPT EXACT) ---
+// --- 🏗️ MODELS ---
 const User = mongoose.model('User', new mongoose.Schema({
   fullName: String, 
   email: { type: String, unique: true }, 
@@ -81,126 +74,127 @@ const Transaction = mongoose.model('Transaction', new mongoose.Schema({
 
 const Wallet = mongoose.model('Wallet', new mongoose.Schema({ name: String, address: String }));
 
-// --- 🏥 HEALTH CHECK ---
-app.get('/', (req, res) => {
-  res.json({ 
-    status: '🚀 AUREUS API ONLINE', 
-    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-    timestamp: new Date().toISOString()
-  });
-});
+// --- 🏥 HEALTH ---
+app.get('/', (req, res) => res.json({ status: '🚀 AUREUS API ONLINE' }));
 
-// --- 🔐 AUTHENTICATION ---
+// --- 🔐 AUTH ---
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
     const cleanEmail = email.toLowerCase().trim();
-    const existingUser = await User.findOne({ email: cleanEmail });
-    if (existingUser) return res.status(400).json({ message: "User already exists" });
-
+    if (await User.findOne({ email: cleanEmail })) return res.status(400).json({ message: "Exists" });
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ fullName, email: cleanEmail, password: hashedPassword });
     await user.save();
     res.json({ success: true, user });
-  } catch (err) {
-    logger.error('Registration error', err);
-    res.status(500).json({ error: "Registration failed" });
-  }
+  } catch (err) { res.status(500).json({ error: "Fail" }); }
 });
 
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) return res.status(400).send("Invalid Credentials");
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (isMatch) {
+    if (user && await bcrypt.compare(password, user.password)) {
       const { password, ...userData } = user._doc;
-      res.json({ user: userData });
-    } else {
-      res.status(400).send("Invalid Credentials");
+      return res.json({ user: userData });
     }
-  } catch (err) {
-    logger.error('Login error', err);
-    res.status(500).send("Login error");
-  }
+    res.status(400).send("Invalid");
+  } catch (err) { res.status(500).send("Error"); }
 });
 
-// --- 💸 TRANSACTIONS ---
+// --- 💸 USER TRANSACTIONS ---
 app.post('/api/transactions/request', async (req, res) => {
   const { userId, amount, type, planName, targetWallet, userWallet, months, parentStructId } = req.body;
   try {
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    if (type === 'withdrawal') {
-      const investment = await Investment.findById(parentStructId);
-      if (!investment) return res.status(404).json({ error: "Investment not found" });
-      if (new Date() < new Date(investment.lockUntil)) {
-        return res.status(403).json({ success: false, message: "PROTOCOL REJECTED: Investment not mature." });
-      }
-
-      const trans = new Transaction({ userId, investmentId: parentStructId, amount, type: 'withdrawal', userWallet });
-      await trans.save();
-      // Background email
-      transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: process.env.ADMIN_EMAIL,
-        subject: `🚨 WITHDRAWAL REQUEST: $${amount} - ${user.fullName}`,
-        html: `<p>USER: ${user.fullName}</p><p>AMOUNT: $${amount}</p>`
-      }).catch(e => logger.error("Withdrawal Email Failed", e));
-
-      return res.json({ success: true });
-    }
-
-    const trans = new Transaction({ userId, amount, type: 'deposit', planName, targetWallet, months, investmentId: parentStructId || null });
+    const trans = new Transaction({ 
+      userId, amount, type, planName, targetWallet, userWallet, months, 
+      investmentId: parentStructId || null 
+    });
     await trans.save();
     
     transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: process.env.ADMIN_EMAIL,
-      subject: `🚨 DEPOSIT REQUEST: $${amount} - ${user.fullName}`,
-      html: `<p>USER: ${user.fullName}</p><p>PLAN: ${planName}</p>`
-    }).catch(e => logger.error("Deposit Email Failed", e));
+      subject: `🚨 ${type.toUpperCase()} REQUEST: $${amount}`,
+      html: `<p>User: ${user.fullName}</p><p>Amount: $${amount}</p>`
+    }).catch(e => logger.error("Email Fail", e));
 
     res.json({ success: true });
-  } catch (err) { 
-    logger.error('Transaction request failed', err);
-    res.status(500).send("Internal Transmission Error"); 
-  }
+  } catch (err) { res.status(500).send("Error"); }
 });
 
-// --- 💼 WALLETS & PROFILES ---
-app.get('/api/wallets', async (req, res) => res.json(await Wallet.find()));
-app.get('/api/user/profile/:id', async (req, res) => res.json(await User.findById(req.params.id)));
 app.get('/api/investments/user/:userId', async (req, res) => {
-  const inv = await Investment.find({ userId: req.params.userId, status: 'active' }).sort({ createdAt: -1 });
-  res.json(inv);
+  res.json(await Investment.find({ userId: req.params.userId, status: 'active' }).sort({ createdAt: -1 }));
 });
 
-// --- 📈 DAILY ROI AUTOMATION (WITH LOGGING) ---
-cron.schedule('0 0 * * *', async () => {
-  logger.cron('Starting Daily ROI Calculation...');
-  try {
-    const activeInvestments = await Investment.find({ status: 'active' });
-    let count = 0;
+// --- 🛠️ RESTORED ADMIN API (THE MISSING PIECE) ---
+app.get('/api/admin/users', async (req, res) => {
+  res.json(await User.find({ role: 'investor' }));
+});
 
-    for (let investment of activeInvestments) {
-      const dailyRate = investment.apy / 365 / 100;
-      const dailyProfit = investment.currentAmount * dailyRate;
+app.get('/api/admin/pending-transactions', async (req, res) => {
+  res.json(await Transaction.find({ status: 'pending' }).populate('userId', 'fullName email'));
+});
+
+app.post('/api/admin/approve-transaction', async (req, res) => {
+  const { transId, userId, amount, type, planName, months } = req.body;
+  try {
+    const trans = await Transaction.findById(transId);
+    if (!trans) return res.status(404).send("Not found");
+
+    if (type === 'deposit') {
+      const apyMap = { 'SILVER TIER': 12, 'GOLD TIER': 24, 'DIAMOND TIER': 40 };
+      const maxMap = { 'SILVER TIER': 5000, 'GOLD TIER': 10000, 'DIAMOND TIER': 50000 };
       
-      investment.currentAmount += dailyProfit;
-      investment.lastProfitUpdate = new Date();
-      await investment.save();
-      
-      await User.findByIdAndUpdate(investment.userId, { $inc: { totalProfit: dailyProfit } });
-      count++;
+      if (trans.investmentId) {
+        await Investment.findByIdAndUpdate(trans.investmentId, { $inc: { currentAmount: amount } });
+      } else {
+        const lockDate = new Date();
+        lockDate.setMonth(lockDate.getMonth() + (months || 3));
+        const newInv = new Investment({
+          userId, currentAmount: amount, planType: planName, 
+          planDuration: months, apy: apyMap[planName], 
+          maxAmount: maxMap[planName], lockUntil: lockDate
+        });
+        await newInv.save();
+      }
+    } else if (type === 'withdrawal') {
+      await Investment.findByIdAndUpdate(trans.investmentId, { status: 'withdrawn' });
     }
-    logger.cron(`ROI Complete. Updated ${count} accounts.`);
-  } catch (err) {
-    logger.error('CRON JOB FAILED', err);
-  }
+
+    await Transaction.findByIdAndUpdate(transId, { status: 'approved' });
+    res.json({ success: true });
+  } catch (err) { logger.error('Approve failed', err); res.status(500).send(err); }
+});
+
+// Wallet Management
+app.get('/api/wallets', async (req, res) => res.json(await Wallet.find()));
+app.post('/api/admin/wallets', async (req, res) => {
+  const wallet = new Wallet(req.body);
+  await wallet.save();
+  res.json(wallet);
+});
+app.delete('/api/admin/wallets/:id', async (req, res) => {
+  await Wallet.findByIdAndDelete(req.params.id);
+  res.json({ success: true });
+});
+
+app.get('/api/user/profile/:id', async (req, res) => res.json(await User.findById(req.params.id)));
+
+// --- 📈 AUTOMATION ---
+cron.schedule('0 0 * * *', async () => {
+  try {
+    const active = await Investment.find({ status: 'active' });
+    for (let inv of active) {
+      const daily = (inv.currentAmount * (inv.apy / 365 / 100));
+      inv.currentAmount += daily;
+      inv.lastProfitUpdate = new Date();
+      await inv.save();
+      await User.findByIdAndUpdate(inv.userId, { $inc: { totalProfit: daily } });
+    }
+    logger.cron('ROI Updated');
+  } catch (err) { logger.error('Cron Failed', err); }
 });
 
 const PORT = process.env.PORT || 5000;
