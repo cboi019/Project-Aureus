@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 const FAQ_DATA = [
@@ -11,6 +11,14 @@ const FAQ_DATA = [
 export default function Contact() {
   const [openFaq, setOpenFaq] = useState(null);
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
+
+  // Force scroll to top on navigation
+  const handleReturn = (e) => {
+    e.preventDefault();
+    window.scrollTo(0, 0);
+    navigate('/');
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText('emmariottt@gmail.com');
@@ -20,26 +28,28 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-amber-500 selection:text-black">
-      {/* Navigation - Streamlined for small screens */}
+      {/* Navigation - Responsive & Scaled */}
       <nav className="flex justify-between items-center px-4 md:px-12 py-6 md:py-8 border-b border-zinc-900/50 backdrop-blur-md sticky top-0 z-50">
-        <Link to="/" className="flex flex-col shrink-0">
+        <div onClick={handleReturn} className="flex flex-col shrink-0 cursor-pointer">
           <span className="text-sm md:text-lg font-bold tracking-[0.3em] md:tracking-[0.5em] uppercase">AUREUS</span>
           <span className="hidden md:block text-[7px] text-amber-500 tracking-[0.4em] uppercase font-black">Capital Management</span>
           <span className="md:hidden text-[5px] text-amber-500 tracking-[0.2em] uppercase font-black">Capital</span>
-        </Link>
+        </div>
         
         <div className="flex items-center gap-4 md:gap-6">
-          {/* Desktop Only Back Link */}
-          <Link to="/" className="hidden md:block text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest cursor-pointer">
+          <button 
+            onClick={handleReturn}
+            className="hidden md:block text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest"
+          >
             ← Back to Terminal
-          </Link>
+          </button>
           <Link to="/login" className="text-[8px] md:text-[9px] border border-zinc-800 px-4 md:px-6 py-2 uppercase font-black hover:bg-white hover:text-black transition-all">
             Client Login
           </Link>
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-6 py-24">
+      <div className="max-w-4xl mx-auto px-6 py-12 md:py-24">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -48,6 +58,7 @@ export default function Contact() {
           <h1 className="text-4xl md:text-7xl font-bold tracking-tighter uppercase mb-16">Support <br/><span className="text-zinc-800">Uplink.</span></h1>
 
           <div className="grid md:grid-cols-2 gap-16 mb-24">
+            {/* Left Column: Email & Copy */}
             <div>
               <h4 className="text-amber-500 text-[10px] font-black tracking-widest uppercase mb-4">Direct Communication</h4>
               <p className="text-zinc-500 text-[11px] uppercase tracking-wider leading-loose mb-6">
@@ -79,6 +90,7 @@ export default function Contact() {
               </div>
             </div>
 
+            {/* Right Column: FAQ */}
             <div>
               <h4 className="text-amber-500 text-[10px] font-black tracking-widest uppercase mb-8">System FAQ</h4>
               <div className="space-y-4">
@@ -95,7 +107,7 @@ export default function Contact() {
                       <motion.p 
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        className="mt-4 text-[9px] text-zinc-500 uppercase leading-relaxed tracking-wider"
+                        className="mt-4 text-[9px] text-zinc-500 uppercase leading-relaxed tracking-wider overflow-hidden"
                       >
                         {faq.a}
                       </motion.p>
@@ -106,11 +118,14 @@ export default function Contact() {
             </div>
           </div>
 
-          {/* Mobile Only Back Link - Neatly positioned at the bottom */}
-          <div className="md:hidden mt-12 flex justify-center border-t border-zinc-900 pt-12">
-             <Link to="/" className="text-[9px] text-zinc-600 hover:text-white uppercase font-black transition-colors tracking-[0.3em] flex items-center gap-2">
+          {/* Mobile Back Link positioned at content bottom */}
+          <div className="md:hidden mt-12 flex justify-center border-t border-zinc-900 pt-12 pb-24">
+             <button 
+                onClick={handleReturn}
+                className="text-[10px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-[0.3em] flex items-center gap-2"
+             >
                 ← Return to Terminal
-             </Link>
+             </button>
           </div>
         </motion.div>
       </div>
