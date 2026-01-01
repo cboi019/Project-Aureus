@@ -178,6 +178,25 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
   } catch (err) { logger.error('Approve failed', err); res.status(500).send(err); }
 });
 
+// This handles the "Decline" button and clears the 404 error
+app.delete('/api/admin/transactions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Option A: Just delete it (Hard purge)
+    await Transaction.findByIdAndDelete(id);
+    
+    // Option B: Keep record but mark as denied (Better for audits)
+    // await Transaction.findByIdAndUpdate(id, { status: 'denied' });
+
+    logger.info(`ADMIN ACTION: Transaction ${id} declined/deleted.`);
+    res.json({ success: true, message: "Transaction removed from terminal." });
+  } catch (err) {
+    logger.error('PURGE ERROR:', err);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+});
+
 // Wallet Management
 app.get('/api/wallets', async (req, res) => res.json(await Wallet.find()));
 app.post('/api/admin/wallets', async (req, res) => {
