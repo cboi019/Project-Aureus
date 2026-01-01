@@ -37,7 +37,7 @@ const LivePayoutLedger = () => {
   return (
     <div className="bg-black border-y border-zinc-900 overflow-hidden py-6 relative">
       <div className="absolute top-0 left-0 w-full h-12 bg-gradient-to-b from-black via-black/80 to-transparent z-10"></div>
-      <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black via-black/80 to-transparent z-10"></div>
+      <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-t from-black via-black/80 to-transparent z-10"></div>
       
       <div className="max-w-7xl mx-auto px-6 mb-6 flex justify-between items-end">
         <div>
@@ -121,15 +121,16 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-amber-500 selection:text-black overflow-x-hidden">
       
-      <nav className="flex justify-between items-center px-6 md:px-12 py-8 border-b border-zinc-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="flex flex-col">
-          <span className="text-lg font-bold tracking-[0.5em] uppercase">AUREUS</span>
-          <span className="text-[7px] text-amber-500 tracking-[0.4em] uppercase font-black">Capital Management</span>
+      <nav className="flex justify-between items-center px-4 md:px-12 py-6 md:py-8 border-b border-zinc-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="flex flex-col shrink-0">
+          <span className="text-sm md:text-lg font-bold tracking-[0.3em] md:tracking-[0.5em] uppercase">AUREUS</span>
+          <span className="hidden md:block text-[7px] text-amber-500 tracking-[0.4em] uppercase font-black">Capital Management</span>
+          <span className="md:hidden text-[5px] text-amber-500 tracking-[0.2em] uppercase font-black">Capital</span>
         </div>
-        <div className="flex items-center gap-6">
-          <Link to="/contact" className="text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest cursor-pointer">Contact Us</Link>
-          <a href="#about" onClick={scrollToAbout} className="text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-widest cursor-pointer">About</a>
-          <Link to="/login" className="text-[9px] border border-zinc-800 px-6 py-2 uppercase font-black hover:bg-white hover:text-black transition-all">Client Login</Link>
+        <div className="flex items-center gap-3 md:gap-6 ml-2">
+          <Link to="/contact" className="text-[8px] md:text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-tighter md:tracking-widest cursor-pointer whitespace-nowrap">Contact Us</Link>
+          <a href="#about" onClick={scrollToAbout} className="text-[8px] md:text-[9px] text-zinc-500 hover:text-white uppercase font-black transition-colors tracking-tighter md:tracking-widest cursor-pointer whitespace-nowrap">About</a>
+          <Link to="/login" className="text-[8px] md:text-[9px] border border-zinc-800 px-3 md:px-6 py-1.5 md:py-2 uppercase font-black hover:bg-white hover:text-black transition-all whitespace-nowrap">Client Login</Link>
         </div>
       </nav>
 
