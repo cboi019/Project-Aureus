@@ -1,3 +1,4 @@
+// server.js
 require('dotenv').config(); 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -95,16 +96,39 @@ app.get('/', (req, res) => {
   });
 });
 
-// SYSTEM RECALIBRATION: One-time hit to separate existing decimals into accruedProfit
-app.get('/api/system/recalibrate', async (req, res) => {
-  const investments = await Investment.find({ status: 'active' });
-  for (let inv of investments) {
-    const total = inv.currentAmount;
-    const principal = Math.floor(total); 
-    inv.accruedProfit = total - principal;
-    await inv.save();
+// 🔧 DATA MIGRATION: Fix corrupted principals and move decimals to accruedProfit
+app.get('/api/system/fix-corruption', async (req, res) => {
+  try {
+    const investments = await Investment.find({ status: 'active' });
+    let fixed = 0;
+    
+    for (let inv of investments) {
+      // Extract the decimal portion (the corrupted profit)
+      const corruptedProfit = inv.currentAmount % 1;
+      
+      if (corruptedProfit > 0) {
+        // Clean the principal by removing decimals
+        inv.currentAmount = Math.floor(inv.currentAmount);
+        
+        // Move the corrupted profit to accruedProfit
+        inv.accruedProfit = (inv.accruedProfit || 0) + corruptedProfit;
+        
+        await inv.save();
+        fixed++;
+        
+        console.log(`Fixed Investment ${inv._id}: Moved ${corruptedProfit.toFixed(3)} to accruedProfit`);
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Fixed ${fixed} corrupted investments`,
+      details: "Decimals moved from principal to accruedProfit"
+    });
+  } catch (err) {
+    console.error('Migration error:', err);
+    res.status(500).json({ error: "Migration failed" });
   }
-  res.json({ success: true, message: "System recalibrated." });
 });
 
 // --- 🔐 AUTHENTICATION ---
@@ -277,13 +301,17 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
     else if (type === 'withdrawal') {
       const investment = await Investment.findById(trans.investmentId);
       if (investment) {
-        // --- 🟢 INVARIANT & MATURITY LOGIC 🟢 ---
-        investment.currentAmount -= Number(amount);
-
-        // RESET ROI IF MATURE: Once mature, the card ROI clears for the new cycle
-        if (new Date() >= new Date(investment.lockUntil)) {
+        // Check if mature
+        const isMature = new Date() >= new Date(investment.lockUntil);
+        
+        if (isMature) {
+          // MATURITY LOGIC: Add accruedProfit to currentAmount, then reset accruedProfit
+          investment.currentAmount += investment.accruedProfit;
           investment.accruedProfit = 0;
         }
+
+        // Now deduct withdrawal amount
+        investment.currentAmount -= Number(amount);
 
         if (investment.currentAmount <= 0) {
           investment.currentAmount = 0;
@@ -352,18 +380,20 @@ cron.schedule('0 0 * * *', async () => {
   const activeInvestments = await Investment.find({ status: 'active' });
   
   for (let investment of activeInvestments) {
+    // Calculate daily rate based on APY
     const dailyRate = investment.apy / 365 / 100;
+    
+    // Calculate daily profit based on PRINCIPAL (currentAmount) only
     const dailyProfit = investment.currentAmount * dailyRate;
     
-    // Total balance increases (Compounding happens here)
-    investment.currentAmount += dailyProfit; 
-    
-    // Specifically track the profit for the "Green Box" display
+    // Add daily profit to accruedProfit (the green box)
     investment.accruedProfit = (investment.accruedProfit || 0) + dailyProfit;
     
+    // Update timestamp
     investment.lastProfitUpdate = new Date();
     await investment.save();
     
+    // Add to user's TOTAL accrued profit (INVARIANT - never goes down)
     await User.findByIdAndUpdate(investment.userId, {
       $inc: { totalProfit: dailyProfit }
     });
