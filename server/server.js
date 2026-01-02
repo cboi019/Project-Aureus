@@ -55,6 +55,7 @@ const User = mongoose.model('User', new mongoose.Schema({
 const InvestmentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   currentAmount: { type: Number, required: true },
+  accruedProfit: { type: Number, default: 0 },
   planType: { type: String, required: true },
   planDuration: { type: Number, required: true },
   apy: { type: Number, required: true },
@@ -327,6 +328,7 @@ app.get('/api/transactions/user/:userId', async (req, res) => {
 });
 
 // --- 📈 DAILY ROI AUTOMATION ---
+// --- 📈 DAILY ROI AUTOMATION ---
 cron.schedule('0 0 * * *', async () => {
   console.log('>>> Running daily ROI calculation...');
   const activeInvestments = await Investment.find({ status: 'active' });
@@ -335,7 +337,12 @@ cron.schedule('0 0 * * *', async () => {
     const dailyRate = investment.apy / 365 / 100;
     const dailyProfit = investment.currentAmount * dailyRate;
     
-    investment.currentAmount += dailyProfit;
+    // Total balance increases (Compounding happens here)
+    investment.currentAmount += dailyProfit; 
+    
+    // Specifically track the profit for the "Green Box" display
+    investment.accruedProfit = (investment.accruedProfit || 0) + dailyProfit;
+    
     investment.lastProfitUpdate = new Date();
     await investment.save();
     
