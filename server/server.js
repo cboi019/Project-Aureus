@@ -55,7 +55,7 @@ const User = mongoose.model('User', new mongoose.Schema({
 const InvestmentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   currentAmount: { type: Number, required: true },
-  accruedProfit: { type: Number, default: 0 },
+  accruedProfit: { type: Number, default: 0 }, // Field for UI display
   planType: { type: String, required: true },
   planDuration: { type: Number, required: true },
   apy: { type: Number, required: true },
@@ -93,6 +93,18 @@ app.get('/', (req, res) => {
     database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
     timestamp: new Date().toISOString()
   });
+});
+
+// SYSTEM RECALIBRATION: One-time hit to separate existing decimals into accruedProfit
+app.get('/api/system/recalibrate', async (req, res) => {
+  const investments = await Investment.find({ status: 'active' });
+  for (let inv of investments) {
+    const total = inv.currentAmount;
+    const principal = Math.floor(total); 
+    inv.accruedProfit = total - principal;
+    await inv.save();
+  }
+  res.json({ success: true, message: "System recalibrated." });
 });
 
 // --- 🔐 AUTHENTICATION ---
@@ -227,10 +239,7 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
     if (!trans) return res.status(404).json({ error: "Transaction not found" });
 
     if (type === 'deposit') {
-      // UPDATED PLAN CONFIGURATION
       const apyMap = { 'SILVER TIER': 12, 'GOLD TIER': 24, 'DIAMOND TIER': 40 };
-      
-      // Updated Max Amount Mapping based on Tier + Duration
       const maxAmountMap = {
         'SILVER TIER': { 3: 1000, 6: 3000, 12: 5000 },
         'GOLD TIER': { 3: 5000, 6: 10000, 12: 20000 },
@@ -268,8 +277,18 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
     else if (type === 'withdrawal') {
       const investment = await Investment.findById(trans.investmentId);
       if (investment) {
+        // --- 🟢 INVARIANT & MATURITY LOGIC 🟢 ---
         investment.currentAmount -= Number(amount);
-        if (investment.currentAmount <= 0) investment.status = 'closed';
+
+        // RESET ROI IF MATURE: Once mature, the card ROI clears for the new cycle
+        if (new Date() >= new Date(investment.lockUntil)) {
+          investment.accruedProfit = 0;
+        }
+
+        if (investment.currentAmount <= 0) {
+          investment.currentAmount = 0;
+          investment.status = 'closed';
+        }
         await investment.save();
       }
       await Transaction.findByIdAndUpdate(transId, { status: 'approved' });
@@ -327,7 +346,6 @@ app.get('/api/transactions/user/:userId', async (req, res) => {
   res.json(transactions);
 });
 
-// --- 📈 DAILY ROI AUTOMATION ---
 // --- 📈 DAILY ROI AUTOMATION ---
 cron.schedule('0 0 * * *', async () => {
   console.log('>>> Running daily ROI calculation...');

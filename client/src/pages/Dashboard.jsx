@@ -371,22 +371,20 @@ export default function Dashboard() {
 function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
   const countdown = getLockCountdown(investment.lockUntil);
   const isLocked = !!countdown;
+  const isMature = !isLocked; // Investment is mature when not locked
   
-  // 1. THE MATH FIX: 
-  // 'investment.accruedProfit' is what the cron job has generated so far.
-  // 'investment.currentAmount' is the TOTAL (Principal + Profit).
-  const accruedROI = Number(investment.accruedProfit) || 0;
+  // THE MATH FIX:
   const totalBalance = Number(investment.currentAmount) || 0;
-  
-  // Principal = Total - what the cron added. 
-  // This ensures Principal only changes on manual Top-Ups.
-  const principal = totalBalance - accruedROI; 
+
+  // ON MATURITY: Accrued ROI resets to 0, Principal becomes the Total (Capital + Profit)
+  const accruedROI = isMature ? 0 : (Number(investment.accruedProfit) || 0);
+  const principal = isMature ? totalBalance : (totalBalance - accruedROI); 
   
   const apy = Number(investment.apy) || 0;
   const months = Number(investment.planDuration) || 3;
 
-  // 2. ANCHORED PROJECTION: Use principal, not total balance.
-  const estProfit = (principal * (apy / 100) * (months / 12)).toFixed(2);
+  // ON MATURITY: Expected return hits 0
+  const estProfit = isMature ? "0.00" : (principal * (apy / 100) * (months / 12)).toFixed(2);
   const canFundMore = totalBalance < investment.maxAmount;
 
   return (
@@ -403,7 +401,6 @@ function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
       </div>
 
       <div className="space-y-2 my-6">
-        {/* CONTRACT CAPITAL: Now shows ONLY the deposit/top-ups */}
         <div className="bg-zinc-950/50 p-3 border border-zinc-900">
           <p className="text-[7px] text-zinc-600 uppercase font-black mb-1">Contract Capital (Principal)</p>
           <p className="text-lg font-mono font-bold text-white">
@@ -411,18 +408,16 @@ function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
           </p>
         </div>
 
-        {/* ACCRUED ROI: This is the compounding profit from the cron */}
         <div className="bg-zinc-950/50 p-3 border border-zinc-900 border-l-emerald-500/50">
           <p className="text-[7px] text-emerald-600/70 uppercase font-black mb-1">Accrued ROI (Compounding)</p>
           <div className="flex items-baseline gap-2">
             <p className="text-lg font-mono font-bold text-emerald-500">
               ${accruedROI.toLocaleString(undefined, { minimumFractionDigits: 3 })}
             </p>
-            <span className="text-[8px] text-emerald-500/50 animate-pulse">LIVE</span>
+            {!isMature && <span className="text-[8px] text-emerald-500/50 animate-pulse">LIVE</span>}
           </div>
         </div>
 
-        {/* EXPECTED RETURN: Locked to the Principal */}
         <div className="bg-zinc-950/50 p-3 border border-zinc-900">
           <p className="text-[7px] text-zinc-600 uppercase font-black mb-1">Expected Return (+{months}mo)</p>
           <p className="text-lg font-mono font-bold text-zinc-400">
@@ -431,7 +426,6 @@ function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
         </div>
       </div>
 
-      {/* ... rest of your buttons and status ... */}
       <div className="pt-4 border-t border-zinc-900 space-y-4">
         <div className="flex flex-col">
           <span className="text-[7px] text-zinc-500 uppercase font-black">Contract Status</span>
