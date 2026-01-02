@@ -371,14 +371,23 @@ export default function Dashboard() {
 function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
   const countdown = getLockCountdown(investment.lockUntil);
   const isLocked = !!countdown;
-  const capital = Number(investment.currentAmount) || 0;
+  
+  // 1. Logic Separation
+  const totalBalance = Number(investment.currentAmount) || 0;
+  const accruedROI = Number(investment.accruedProfit) || 0;
+  
+  // Principal is the actual money deposited (Total - Profits)
+  const principal = totalBalance - accruedROI; 
+  
   const apy = Number(investment.apy) || 0;
   const months = Number(investment.planDuration) || 3;
-  const estProfit = (capital * (apy / 100) * (months / 12)).toFixed(2);
-  const canFundMore = capital < investment.maxAmount;
+
+  // 2. Calculation anchored to Principal only
+  const estProfit = (principal * (apy / 100) * (months / 12)).toFixed(2);
+  const canFundMore = totalBalance < investment.maxAmount;
 
   return (
-    <div className="bg-[#0a0a0a] border border-zinc-800 p-6 flex flex-col justify-between min-h-[360px] hover:border-zinc-600 transition-all">
+    <div className="bg-[#0a0a0a] border border-zinc-800 p-6 flex flex-col justify-between min-h-[400px] hover:border-zinc-600 transition-all">
       <div className="flex justify-between items-start">
         <div>
           <h3 className="text-xl font-black text-white uppercase italic">{investment.planType}</h3>
@@ -389,16 +398,30 @@ function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
            <p className="text-emerald-500 font-mono text-xs">{apy}% APY</p>
         </div>
       </div>
-      <div className="space-y-3 my-6">
+
+      <div className="space-y-2 my-6">
+        {/* ROW 1: THE PRINCIPAL (Fixed) */}
         <div className="bg-zinc-950/50 p-3 border border-zinc-900">
-          <p className="text-[7px] text-zinc-600 uppercase font-black mb-1">Contract Capital</p>
-          <p className="text-lg font-mono font-bold text-white">${capital.toLocaleString()}</p>
+          <p className="text-[7px] text-zinc-600 uppercase font-black mb-1">Contract Capital (Principal)</p>
+          <p className="text-lg font-mono font-bold text-white">${principal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
         </div>
+
+        {/* ROW 2: THE COMPOUNDING PROFIT (Live) */}
+        <div className="bg-zinc-950/50 p-3 border border-zinc-900 border-l-emerald-500/50">
+          <p className="text-[7px] text-emerald-600/70 uppercase font-black mb-1">Accrued ROI (Compounding)</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-lg font-mono font-bold text-emerald-500">${accruedROI.toLocaleString(undefined, { minimumFractionDigits: 3 })}</p>
+            <span className="text-[8px] text-emerald-500/50 animate-pulse">LIVE</span>
+          </div>
+        </div>
+
+        {/* ROW 3: THE PROJECTION (Anchored to Principal) */}
         <div className="bg-zinc-950/50 p-3 border border-zinc-900">
           <p className="text-[7px] text-zinc-600 uppercase font-black mb-1">Expected Return (+{months}mo)</p>
-          <p className="text-lg font-mono font-bold text-emerald-500">+${Number(estProfit).toLocaleString()}</p>
+          <p className="text-lg font-mono font-bold text-zinc-400">+${Number(estProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
+
       <div className="pt-4 border-t border-zinc-900 space-y-4">
         <div className="flex flex-col">
           <span className="text-[7px] text-zinc-500 uppercase font-black">Contract Status</span>
