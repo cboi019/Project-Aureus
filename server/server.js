@@ -10,21 +10,19 @@ const cron = require('node-cron');
 const app = express();
 app.use(express.json());
 
-// 2. Restricted CORS for security (replace with your frontend URL later)
 app.use(cors({
   origin: [
     'http://localhost:5173', 
-    'https://aureus-capital.onrender.com' // YOUR RENDER FRONTEND URL
+    'https://aureus-capital.onrender.com'
   ],
   credentials: true
 }));
 
-// --- 🛡️ DATABASE CONNECTION (STRICTLY ADDED POOLING ONLY) ---
 const connectionOptions = {
   dbName: 'aureus_capital',
-  maxPoolSize: 10,             // Allows up to 10 simultaneous database pipes
-  minPoolSize: 2,               // Keeps 2 pipes open at all times for speed
-  socketTimeoutMS: 45000,      // Prevents "hanging" requests from crashing the server
+  maxPoolSize: 10,
+  minPoolSize: 2,
+  socketTimeoutMS: 45000,
   serverSelectionTimeoutMS: 5000
 };
 
@@ -44,7 +42,6 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// --- 🏗️ SCHEMAS (KEPT EXACTLY AS PROVIDED) ---
 const User = mongoose.model('User', new mongoose.Schema({
   fullName: String, 
   email: { type: String, unique: true }, 
@@ -56,7 +53,7 @@ const User = mongoose.model('User', new mongoose.Schema({
 const InvestmentSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   currentAmount: { type: Number, required: true },
-  accruedProfit: { type: Number, default: 0 }, // Field for UI display
+  accruedProfit: { type: Number, default: 0 },
   planType: { type: String, required: true },
   planDuration: { type: Number, required: true },
   apy: { type: Number, required: true },
@@ -86,7 +83,6 @@ const Transaction = mongoose.model('Transaction', TransactionSchema);
 
 const Wallet = mongoose.model('Wallet', new mongoose.Schema({ name: String, address: String }));
 
-// --- 🏥 HEALTH CHECK ROUTE ---
 app.get('/', (req, res) => {
   res.json({ 
     status: '🚀 AUREUS API ONLINE', 
@@ -96,42 +92,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// 🔧 DATA MIGRATION: Fix corrupted principals and move decimals to accruedProfit
-app.get('/api/system/fix-corruption', async (req, res) => {
-  try {
-    const investments = await Investment.find({ status: 'active' });
-    let fixed = 0;
-    
-    for (let inv of investments) {
-      // Extract the decimal portion (the corrupted profit)
-      const corruptedProfit = inv.currentAmount % 1;
-      
-      if (corruptedProfit > 0) {
-        // Clean the principal by removing decimals
-        inv.currentAmount = Math.floor(inv.currentAmount);
-        
-        // Move the corrupted profit to accruedProfit
-        inv.accruedProfit = (inv.accruedProfit || 0) + corruptedProfit;
-        
-        await inv.save();
-        fixed++;
-        
-        console.log(`Fixed Investment ${inv._id}: Moved ${corruptedProfit.toFixed(3)} to accruedProfit`);
-      }
-    }
-    
-    res.json({ 
-      success: true, 
-      message: `Fixed ${fixed} corrupted investments`,
-      details: "Decimals moved from principal to accruedProfit"
-    });
-  } catch (err) {
-    console.error('Migration error:', err);
-    res.status(500).json({ error: "Migration failed" });
-  }
-});
-
-// --- 🔐 AUTHENTICATION ---
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
@@ -169,7 +129,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// --- 💸 TRANSACTIONS & INVESTMENT MANAGEMENT ---
 app.post('/api/transactions/request', async (req, res) => {
   const { userId, amount, type, planName, targetWallet, userWallet, months, parentStructId } = req.body;
   
@@ -248,7 +207,6 @@ app.post('/api/transactions/request', async (req, res) => {
   }
 });
 
-// --- 🛠️ ADMIN PANEL ---
 app.get('/api/admin/users', async (req, res) => res.json(await User.find({ role: 'investor' })));
 
 app.get('/api/admin/pending-transactions', async (req, res) => {
@@ -287,6 +245,7 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
         const investment = new Investment({
           userId,
           currentAmount: Number(amount),
+          accruedProfit: 0,
           planType: trans.planName,
           planDuration: trans.months,
           apy,
@@ -301,16 +260,14 @@ app.post('/api/admin/approve-transaction', async (req, res) => {
     else if (type === 'withdrawal') {
       const investment = await Investment.findById(trans.investmentId);
       if (investment) {
-        // Check if mature
         const isMature = new Date() >= new Date(investment.lockUntil);
         
         if (isMature) {
-          // MATURITY LOGIC: Add accruedProfit to currentAmount, then reset accruedProfit
+          // MATURITY: Merge accruedProfit into principal, reset to 0
           investment.currentAmount += investment.accruedProfit;
           investment.accruedProfit = 0;
         }
 
-        // Now deduct withdrawal amount
         investment.currentAmount -= Number(amount);
 
         if (investment.currentAmount <= 0) {
@@ -340,7 +297,6 @@ app.delete('/api/admin/users/:id', async (req, res) => {
   res.json({ success: true });
 });
 
-// --- 💼 WALLETS & PROFILES ---
 app.get('/api/wallets', async (req, res) => res.json(await Wallet.find()));
 
 app.post('/api/admin/wallets', async (req, res) => {
@@ -374,30 +330,43 @@ app.get('/api/transactions/user/:userId', async (req, res) => {
   res.json(transactions);
 });
 
-// --- 📈 DAILY ROI AUTOMATION ---
+// --- 📈 CORRECT DAILY ROI AUTOMATION ---
 cron.schedule('0 0 * * *', async () => {
   console.log('>>> Running daily ROI calculation...');
   const activeInvestments = await Investment.find({ status: 'active' });
   
   for (let investment of activeInvestments) {
-    // Calculate daily rate based on APY
-    const dailyRate = investment.apy / 365 / 100;
+    const now = new Date();
+    const isMature = now >= new Date(investment.lockUntil);
     
-    // Calculate daily profit based on PRINCIPAL (currentAmount) only
+    if (isMature) {
+      // MATURITY: Merge accruedProfit into principal and reset
+      investment.currentAmount += investment.accruedProfit;
+      investment.accruedProfit = 0;
+      investment.lastProfitUpdate = now;
+      await investment.save();
+      
+      console.log(`>>> Investment ${investment._id} MATURED - Profit merged into principal`);
+      continue; // Skip ROI calculation for mature investments
+    }
+    
+    // Calculate daily ROI based on PRINCIPAL (currentAmount) only
+    const dailyRate = investment.apy / 365 / 100;
     const dailyProfit = investment.currentAmount * dailyRate;
     
-    // Add daily profit to accruedProfit (the green box)
+    // Add daily profit ONLY to accruedProfit (green box)
     investment.accruedProfit = (investment.accruedProfit || 0) + dailyProfit;
-    
-    // Update timestamp
-    investment.lastProfitUpdate = new Date();
+    investment.lastProfitUpdate = now;
     await investment.save();
     
-    // Add to user's TOTAL accrued profit (INVARIANT - never goes down)
+    // Update user's TOTAL accrued profit (INVARIANT - never decreases)
     await User.findByIdAndUpdate(investment.userId, {
       $inc: { totalProfit: dailyProfit }
     });
+    
+    console.log(`>>> Investment ${investment._id}: +$${dailyProfit.toFixed(3)} added to accruedProfit`);
   }
+  
   console.log(`>>> Updated ${activeInvestments.length} investments`);
 });
 
