@@ -1,4 +1,4 @@
-// Dashboard.jsx
+// Dashboard.jsx - CORRECTED VERSION
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +12,6 @@ const PLANS = [
   { name: "DIAMOND TIER", apy: 40 }
 ];
 
-// --- UPDATED AMOUNT RANGES TO MATCH NEW TIER SPECS ---
 const amountRanges = {
   "SILVER TIER": {
     3: { min: 100, max: 1000 },
@@ -56,7 +55,6 @@ export default function Dashboard() {
   
   const navigate = useNavigate();
 
-  // Logic to pull the correct range based on Plan AND Duration
   const currentRange = selectedPlan 
     ? amountRanges[selectedPlan.name][selectedMonths] 
     : { min: 0, max: 0 };
@@ -179,7 +177,7 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           userId: user._id, 
-          amount: selectedTxForWithdraw.currentAmount,
+          amount: selectedTxForWithdraw.currentAmount + selectedTxForWithdraw.accruedProfit,
           type: "withdrawal", 
           userWallet: withdrawalAddress,
           parentStructId: selectedTxForWithdraw._id
@@ -315,7 +313,7 @@ export default function Dashboard() {
                               className="shrink-0 bg-amber-500 text-black px-4 py-2 text-[8px] font-black uppercase hover:bg-white transition-all"
                             >COPY</button>
                           </div>
-                          <p className="text-[8px] text-zinc-600 uppercase italic">Send exact amount to this address externally</p>
+                          <p className="text-[8px] text-zinc-600 uppercase italic">Send exact amount to this address externally</pეს
                         </div>
                       )}
 
@@ -336,7 +334,7 @@ export default function Dashboard() {
                     <>
                       <div className="text-center">
                         <p className="text-[9px] text-zinc-600 uppercase font-black mb-2">Authorized Struct Liquidity</p>
-                        <p className="text-4xl font-mono font-bold text-white">${Number(selectedTxForWithdraw.currentAmount).toLocaleString()}</p>
+                        <p className="text-4xl font-mono font-bold text-white">${(Number(selectedTxForWithdraw.currentAmount) + Number(selectedTxForWithdraw.accruedProfit)).toLocaleString()}</p>
                         {getLockCountdown(selectedTxForWithdraw.lockUntil) && (
                            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/50 text-red-500">
                              <p className="text-[9px] font-black uppercase tracking-tighter">⚠️ PROTOCOL LOCKED: IMMATURE ASSET</p>
@@ -371,21 +369,18 @@ export default function Dashboard() {
 function ActivePlanCard({ investment, onFund, onWithdraw, getLockCountdown }) {
   const countdown = getLockCountdown(investment.lockUntil);
   const isLocked = !!countdown;
-  const isMature = !isLocked; // Investment is mature when not locked
+  const isMature = !isLocked;
   
-  // THE MATH FIX:
-  const totalBalance = Number(investment.currentAmount) || 0;
-
-  // ON MATURITY: Accrued ROI resets to 0, Principal becomes the Total (Capital + Profit)
+  // ✅ CORRECT: Just read the fields directly!
+  const principal = Number(investment.currentAmount) || 0;
   const accruedROI = isMature ? 0 : (Number(investment.accruedProfit) || 0);
-  const principal = isMature ? totalBalance : (totalBalance - accruedROI); 
   
   const apy = Number(investment.apy) || 0;
   const months = Number(investment.planDuration) || 3;
 
-  // ON MATURITY: Expected return hits 0
+  // Expected return based on principal only
   const estProfit = isMature ? "0.00" : (principal * (apy / 100) * (months / 12)).toFixed(2);
-  const canFundMore = totalBalance < investment.maxAmount;
+  const canFundMore = principal < investment.maxAmount;
 
   return (
     <div className="bg-[#0a0a0a] border border-zinc-800 p-6 flex flex-col justify-between min-h-[400px] hover:border-zinc-600 transition-all">
