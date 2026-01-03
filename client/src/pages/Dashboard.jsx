@@ -313,7 +313,7 @@ export default function Dashboard() {
                               className="shrink-0 bg-amber-500 text-black px-4 py-2 text-[8px] font-black uppercase hover:bg-white transition-all"
                             >COPY</button>
                           </div>
-                          <p className="text-[8px] text-zinc-600 uppercase italic">Send exact amount to this address externally</pეს
+                          <p className="text-[8px] text-zinc-600 uppercase italic">Send exact amount to this address externally</p>
                         </div>
                       )}
 
